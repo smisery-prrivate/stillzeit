@@ -1,0 +1,15 @@
+{
+  "name": "Stillzeit",
+  "short_name": "Stillzeit",
+  "description": "Stillen einhändig tracken: Start, Stopp, fertig.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#fbf6f3",
+  "theme_color": "#e0607e",
+  "lang": "de",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

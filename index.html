@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e0607e">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Stillzeit</title>
+<style>
+  :root { --bg: #fbf6f3; --ink: #2b2530; --muted: #9a8f96; --accent: #e0607e; --accent-dark: #c44a68; --card: #fff; --line: #f0e4e6; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body { background: var(--bg); color: var(--ink); font-family: -apple-system, "Segoe UI", Roboto, sans-serif; display: flex; justify-content: center; }
+  #app { width: 100%; max-width: 480px; min-height: 100%; padding: max(env(safe-area-inset-top), 16px) 16px 300px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; padding: 8px 4px 4px; }
+  h1 { font-size: 20px; font-weight: 700; }
+  .version { font-size: 11px; color: #d6c9cd; }
+  #since { font-size: 14px; color: var(--muted); padding: 0 4px 18px; min-height: 20px; }
+  #since b { color: var(--ink); font-weight: 600; }
+
+  /* day groups */
+  .day { margin-bottom: 14px; }
+  .dayhead { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; border-radius: 12px; margin-bottom: 6px; font-size: 13px; font-weight: 600; letter-spacing: .02em; }
+  .dayhead .cnt { font-size: 13px; font-weight: 700; }
+  .dayhead .sum { font-weight: 500; opacity: .85; }
+  .row { display: flex; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 6px; font-size: 16px; line-height: 1.35; user-select: none; }
+  .row .t { flex: 1; font-variant-numeric: tabular-nums; }
+  .row .d { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .row .del { display: none; margin-left: 12px; height: 44px; padding: 0 14px; border: none; border-radius: 10px; background: #fde8ee; color: var(--accent-dark); font-size: 14px; font-weight: 600; }
+  .row.armed .del { display: inline-block; }
+  .row.armed { border-color: var(--accent); }
+  .empty { color: var(--muted); font-size: 15px; text-align: center; padding: 36px 12px; line-height: 1.5; }
+
+  /* big button in the thumb zone */
+  .dock { position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; width: 100%; max-width: 480px; padding: 12px 16px calc(env(safe-area-inset-bottom) + 20px); z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 10px; background: linear-gradient(to top, var(--bg) 78%, rgba(251,246,243,0)); }
+  #big { width: 190px; height: 190px; border-radius: 50%; border: none; background: var(--accent); color: #fff; font-size: 26px; font-weight: 700; box-shadow: 0 12px 32px rgba(224,96,126,.45); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  #big:active { transform: scale(.97); }
+  #big .clock { font-size: 44px; font-variant-numeric: tabular-nums; letter-spacing: .02em; line-height: 1.1; }
+  #big .lbl { font-size: 15px; font-weight: 600; opacity: .9; }
+  #big.running { background: var(--ink); box-shadow: 0 12px 32px rgba(43,37,48,.4); animation: breathe 2.4s ease-in-out infinite; }
+  @keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.025); } }
+  #cancel { height: 44px; padding: 0 18px; border: none; border-radius: 22px; background: transparent; color: var(--muted); font-size: 14px; visibility: hidden; }
+  #cancel.show { visibility: visible; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div><h1>Stillzeit</h1><div class="version">v1</div></div>
+  </header>
+  <div id="since"></div>
+  <div id="list"></div>
+  <div id="empty" class="empty" hidden>Noch kein Eintrag.<br>Unten tippen, wenn das Stillen beginnt.</div>
+  <div class="dock">
+    <button id="big"><span class="clock">Start</span><span class="lbl">Stillen</span></button>
+    <button id="cancel">Verwerfen</button>
+  </div>
+</div>
+<script src="config.js"></script>
+<script>
+(() => {
+  'use strict';
+  const STORE_KEY = 'stillzeit.v1';
+  const RUN_KEY = 'stillzeit.running';
+  const $ = id => document.getElementById(id);
+  let items = [];      // { id, start, end, deleted?, updated_at }
+  let snap = {};
+  let running = null;  // start timestamp (ms) or null
+  let armed = null;    // id of the row showing its delete button
+  let tick = null;
+
+  // ---------- storage ----------
+  const sigOf = it => { const c = Object.assign({}, it); delete c.updated_at; return JSON.stringify(c); };
+  function load() {
+    try { items = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { items = []; }
+    for (const it of items) if (!it.updated_at) it.updated_at = it.end;
+    snap = {}; for (const it of items) snap[it.id] = sigOf(it);
+    const r = Number(localStorage.getItem(RUN_KEY));
+    running = r > 0 ? r : null;
+  }
+  function mergeStored() {
+    let stored = [];
+    try { stored = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { return; }
+    for (const o of stored) {
+      const i = items.findIndex(x => x.id === o.id);
+      if (i < 0) { items.push(o); snap[o.id] = sigOf(o); }
+      else if ((o.updated_at || 0) > (items[i].updated_at || 0)) { items[i] = o; snap[o.id] = sigOf(o); }
+    }
+  }
+  function save() {
+    const now = Date.now();
+    for (const it of items) { const s = sigOf(it); if (snap[it.id] !== s) { it.updated_at = now; snap[it.id] = s; } }
+    mergeStored();
+    localStorage.setItem(STORE_KEY, JSON.stringify(items));
+  }
+  function saveRunning() { if (running) localStorage.setItem(RUN_KEY, String(running)); else localStorage.removeItem(RUN_KEY); }
+  window.addEventListener('storage', e => {
+    if (e.key === STORE_KEY) { mergeStored(); render(); }
+    if (e.key === RUN_KEY) { const r = Number(e.newValue); running = r > 0 ? r : null; syncButton(); }
+  });
+
+  // ---------- formatting ----------
+  const pad = n => String(n).padStart(2, '0');
+  const hhmm = ts => { const d = new Date(ts); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+  const dayKey = ts => { const d = new Date(ts); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+  function dayLabel(key) {
+    const today = dayKey(Date.now()), yest = dayKey(Date.now() - 864e5);
+    if (key === today) return 'Heute';
+    if (key === yest) return 'Gestern';
+    const [y, m, d] = key.split('-');
+    return new Date(y, m - 1, d).toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' });
+  }
+  const mins = ms => Math.max(1, Math.round(ms / 60000));
+  function durLabel(ms) { const m = mins(ms); return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min'; }
+  function clock(ms) { const s = Math.floor(ms / 1000); return pad(Math.floor(s / 60)) + ':' + pad(s % 60); }
+  function ago(ms) {
+    const m = Math.floor(ms / 60000);
+    if (m < 1) return 'gerade eben';
+    if (m < 60) return 'vor ' + m + ' min';
+    const h = Math.floor(m / 60);
+    return 'vor ' + h + ' h ' + (m % 60) + ' min';
+  }
+
+  // colour per day: more feeds → deeper tint (scale 0..16 feeds)
+  function dayColor(count) {
+    const t = Math.min(count, 16) / 16;
+    const light = 96 - t * 30;            // 96% → 66%
+    const ink = light < 78 ? '#fff' : '#7a2f47';
+    return { bg: 'hsl(345 70% ' + light + '%)', fg: ink };
+  }
+
+  // ---------- render ----------
+  function render() {
+    const alive = items.filter(i => !i.deleted).sort((a, b) => b.start - a.start);
+    const list = $('list');
+    list.innerHTML = '';
+    const groups = new Map();
+    for (const it of alive) { const k = dayKey(it.start); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(it); }
+    for (const [k, rows] of groups) {
+      const wrap = document.createElement('div'); wrap.className = 'day';
+      const total = rows.reduce((s, r) => s + (r.end - r.start), 0);
+      const col = dayColor(rows.length);
+      const head = document.createElement('div'); head.className = 'dayhead';
+      head.style.background = col.bg; head.style.color = col.fg;
+      head.innerHTML = '<span>' + dayLabel(k) + '</span><span><span class="cnt">' + rows.length + '×</span> <span class="sum">· ' + durLabel(total) + '</span></span>';
+      wrap.appendChild(head);
+      for (const it of rows) {
+        const el = document.createElement('div'); el.className = 'row' + (armed === it.id ? ' armed' : '');
+        el.innerHTML = '<span class="t">' + hhmm(it.start) + ' – ' + hhmm(it.end) + '</span><span class="d">' + durLabel(it.end - it.start) + '</span><button class="del">Löschen</button>';
+        el.addEventListener('click', e => {
+          if (e.target.classList.contains('del')) { it.deleted = true; armed = null; save(); render(); return; }
+          armed = armed === it.id ? null : it.id; render();
+        });
+        wrap.appendChild(el);
+      }
+      list.appendChild(wrap);
+    }
+    $('empty').hidden = alive.length > 0;
+    renderSince(alive[0]);
+  }
+  function renderSince(last) {
+    const el = $('since');
+    if (running) { el.innerHTML = 'Stillen läuft seit <b>' + hhmm(running) + '</b>'; return; }
+    if (!last) { el.textContent = ''; return; }
+    el.innerHTML = 'Letztes Stillen <b>' + ago(Date.now() - last.end) + '</b>';
+  }
+
+  // ---------- the one button ----------
+  const big = $('big'), cancel = $('cancel');
+  function syncButton() {
+    big.classList.toggle('running', !!running);
+    cancel.classList.toggle('show', !!running);
+    if (tick) { clearInterval(tick); tick = null; }
+    if (running) {
+      const upd = () => { big.querySelector('.clock').textContent = clock(Date.now() - running); };
+      upd(); big.querySelector('.lbl').textContent = 'Stopp';
+      tick = setInterval(upd, 1000);
+    } else {
+      big.querySelector('.clock').textContent = 'Start';
+      big.querySelector('.lbl').textContent = 'Stillen';
+    }
+    renderSince(items.filter(i => !i.deleted).sort((a, b) => b.start - a.start)[0]);
+  }
+  big.addEventListener('click', () => {
+    if (!running) { running = Date.now(); saveRunning(); syncButton(); return; }
+    const end = Date.now();
+    if (end - running >= 10000) {   // shorter than 10 s counts as a mis-tap
+      items.unshift({ id: end + Math.random().toString(36).slice(2, 6), start: running, end });
+      save();
+    }
+    running = null; saveRunning(); armed = null;
+    syncButton(); render();
+  });
+  cancel.addEventListener('click', () => { running = null; saveRunning(); syncButton(); });
+
+  // refresh "vor x min" once a minute, and after the phone wakes up
+  setInterval(() => { if (!running) render(); }, 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { load(); syncButton(); render(); } });
+
+  // ---------- boot ----------
+  load();
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+  syncButton();
+  render();
+  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');
+})();
+</script>
+</body>
+</html>
