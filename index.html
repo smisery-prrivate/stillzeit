@@ -14,9 +14,10 @@
   html, body { height: 100%; }
   body { background: var(--bg); color: var(--ink); font-family: -apple-system, "Segoe UI", Roboto, sans-serif; display: flex; justify-content: center; }
   #app { width: 100%; max-width: 480px; min-height: 100%; padding: max(env(safe-area-inset-top), 16px) 16px 300px; }
-  header { display: flex; align-items: baseline; justify-content: space-between; padding: 8px 4px 4px; }
+  header { display: flex; align-items: center; justify-content: space-between; padding: 8px 4px 4px; }
   h1 { font-size: 20px; font-weight: 700; }
   .version { font-size: 11px; color: #d6c9cd; }
+  .pill { height: 36px; padding: 0 14px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); color: var(--muted); font-size: 13px; cursor: pointer; }
   #since { font-size: 14px; color: var(--muted); padding: 0 4px 18px; min-height: 20px; }
   #since b { color: var(--ink); font-weight: 600; }
 
@@ -43,12 +44,20 @@
   @keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.025); } }
   #cancel { height: 44px; padding: 0 18px; border: none; border-radius: 22px; background: transparent; color: var(--muted); font-size: 14px; visibility: hidden; }
   #cancel.show { visibility: visible; }
+
+  /* menu sheet */
+  #sheet { position: fixed; inset: 0; background: rgba(43,37,48,.35); z-index: 9; display: none; align-items: flex-end; justify-content: center; }
+  #sheet.open { display: flex; }
+  #sheet .panel { width: 100%; max-width: 480px; background: var(--card); border-radius: 20px 20px 0 0; padding: 16px 16px calc(env(safe-area-inset-bottom) + 20px); }
+  #sheet .panel button { display: block; width: 100%; height: 52px; border: none; border-radius: 12px; background: var(--bg); color: var(--ink); font-size: 16px; margin-bottom: 8px; text-align: left; padding: 0 16px; }
+  #sheet .panel .hint { font-size: 12px; color: var(--muted); padding: 4px 4px 12px; line-height: 1.4; }
 </style>
 </head>
 <body>
 <div id="app">
   <header>
-    <div><h1>Stillzeit</h1><div class="version">v1</div></div>
+    <div><h1>Stillzeit</h1><div class="version">v2</div></div>
+    <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
   <div id="list"></div>
@@ -58,48 +67,94 @@
     <button id="cancel">Verwerfen</button>
   </div>
 </div>
+<div id="sheet">
+  <div class="panel">
+    <div class="hint" id="stats"></div>
+    <button id="exportJson">Sicherung als JSON speichern</button>
+    <button id="exportCsv">Als CSV exportieren</button>
+    <button id="importJson">Sicherung wiederherstellen</button>
+    <button id="closeSheet">Schließen</button>
+    <input id="file" type="file" accept="application/json" hidden>
+  </div>
+</div>
 <script src="config.js"></script>
 <script>
 (() => {
   'use strict';
-  const STORE_KEY = 'stillzeit.v1';
+  /* ------------------------------------------------------------------
+     Data model (schema 2). One flat event log, one store, all future
+     trackers are just new `type` values. See CONCEPT.md.
+       db = { schema, device_id, children: [{id,name,born,...}], events: [...] }
+       event = { id, type, child_id, start, end?, value?, unit?, note?,
+                 created_by, created_at, updated_at, deleted? }
+     Types today: 'feed'. Later e.g. 'weight' (value+unit, no end),
+     'height', 'sleep' (start+end), 'diaper' (start only).
+  ------------------------------------------------------------------ */
+  const DB_KEY = 'stillzeit.db';
+  const LEGACY_KEY = 'stillzeit.v1';
   const RUN_KEY = 'stillzeit.running';
   const $ = id => document.getElementById(id);
-  let items = [];      // { id, start, end, deleted?, updated_at }
+  const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
+
+  let db = null;
   let snap = {};
-  let running = null;  // start timestamp (ms) or null
-  let armed = null;    // id of the row showing its delete button
+  let running = null;  // { start, child_id } or null
+  let armed = null;
   let tick = null;
 
   // ---------- storage ----------
-  const sigOf = it => { const c = Object.assign({}, it); delete c.updated_at; return JSON.stringify(c); };
+  const sigOf = ev => { const c = Object.assign({}, ev); delete c.updated_at; return JSON.stringify(c); };
+  function emptyDb() {
+    const child = { id: uid(), name: 'Baby', created_at: Date.now(), updated_at: Date.now() };
+    return { schema: 2, device_id: uid(), active_child: child.id, children: [child], events: [] };
+  }
+  function migrateLegacy(d) {
+    let old = [];
+    try { old = JSON.parse(localStorage.getItem(LEGACY_KEY) || '[]'); } catch (e) { return; }
+    if (!old.length) return;
+    for (const it of old) if (!d.events.some(e => e.id === String(it.id))) {
+      d.events.push({ id: String(it.id), type: 'feed', child_id: d.active_child, start: it.start, end: it.end,
+        created_by: d.device_id, created_at: it.end, updated_at: it.updated_at || it.end, deleted: it.deleted || undefined });
+    }
+    localStorage.removeItem(LEGACY_KEY);
+  }
   function load() {
-    try { items = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { items = []; }
-    for (const it of items) if (!it.updated_at) it.updated_at = it.end;
-    snap = {}; for (const it of items) snap[it.id] = sigOf(it);
-    const r = Number(localStorage.getItem(RUN_KEY));
-    running = r > 0 ? r : null;
+    try { db = JSON.parse(localStorage.getItem(DB_KEY) || 'null'); } catch (e) { db = null; }
+    if (!db || db.schema !== 2) db = emptyDb();
+    migrateLegacy(db);
+    snap = {}; for (const ev of db.events) snap[ev.id] = sigOf(ev);
+    try { running = JSON.parse(localStorage.getItem(RUN_KEY) || 'null'); } catch (e) { running = null; }
+    if (typeof running === 'number') running = { start: running, child_id: db.active_child }; // pre-v2 format
   }
   function mergeStored() {
-    let stored = [];
-    try { stored = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { return; }
-    for (const o of stored) {
-      const i = items.findIndex(x => x.id === o.id);
-      if (i < 0) { items.push(o); snap[o.id] = sigOf(o); }
-      else if ((o.updated_at || 0) > (items[i].updated_at || 0)) { items[i] = o; snap[o.id] = sigOf(o); }
+    let stored = null;
+    try { stored = JSON.parse(localStorage.getItem(DB_KEY) || 'null'); } catch (e) { return; }
+    if (!stored || stored.schema !== 2) return;
+    for (const o of stored.events) {
+      const i = db.events.findIndex(x => x.id === o.id);
+      if (i < 0) { db.events.push(o); snap[o.id] = sigOf(o); }
+      else if ((o.updated_at || 0) > (db.events[i].updated_at || 0)) { db.events[i] = o; snap[o.id] = sigOf(o); }
     }
   }
   function save() {
     const now = Date.now();
-    for (const it of items) { const s = sigOf(it); if (snap[it.id] !== s) { it.updated_at = now; snap[it.id] = s; } }
+    for (const ev of db.events) { const s = sigOf(ev); if (snap[ev.id] !== s) { ev.updated_at = now; snap[ev.id] = s; } }
     mergeStored();
-    localStorage.setItem(STORE_KEY, JSON.stringify(items));
+    localStorage.setItem(DB_KEY, JSON.stringify(db));
   }
-  function saveRunning() { if (running) localStorage.setItem(RUN_KEY, String(running)); else localStorage.removeItem(RUN_KEY); }
+  function saveRunning() { if (running) localStorage.setItem(RUN_KEY, JSON.stringify(running)); else localStorage.removeItem(RUN_KEY); }
   window.addEventListener('storage', e => {
-    if (e.key === STORE_KEY) { mergeStored(); render(); }
-    if (e.key === RUN_KEY) { const r = Number(e.newValue); running = r > 0 ? r : null; syncButton(); }
+    if (e.key === DB_KEY) { mergeStored(); render(); }
+    if (e.key === RUN_KEY) { load(); syncButton(); }
   });
+
+  // ---------- queries ----------
+  const feeds = () => db.events.filter(e => e.type === 'feed' && !e.deleted && e.child_id === db.active_child).sort((a, b) => b.start - a.start);
+  function addEvent(ev) {
+    const now = Date.now();
+    db.events.unshift(Object.assign({ id: uid(), child_id: db.active_child, created_by: db.device_id, created_at: now, updated_at: now }, ev));
+    save();
+  }
 
   // ---------- formatting ----------
   const pad = n => String(n).padStart(2, '0');
@@ -122,18 +177,15 @@
     const h = Math.floor(m / 60);
     return 'vor ' + h + ' h ' + (m % 60) + ' min';
   }
-
-  // colour per day: more feeds → deeper tint (scale 0..16 feeds)
-  function dayColor(count) {
+  function dayColor(count) {           // more feeds per day → deeper tint (scale 0..16)
     const t = Math.min(count, 16) / 16;
-    const light = 96 - t * 30;            // 96% → 66%
-    const ink = light < 78 ? '#fff' : '#7a2f47';
-    return { bg: 'hsl(345 70% ' + light + '%)', fg: ink };
+    const light = 96 - t * 30;
+    return { bg: 'hsl(345 70% ' + light + '%)', fg: light < 78 ? '#fff' : '#7a2f47' };
   }
 
   // ---------- render ----------
   function render() {
-    const alive = items.filter(i => !i.deleted).sort((a, b) => b.start - a.start);
+    const alive = feeds();
     const list = $('list');
     list.innerHTML = '';
     const groups = new Map();
@@ -162,7 +214,7 @@
   }
   function renderSince(last) {
     const el = $('since');
-    if (running) { el.innerHTML = 'Stillen läuft seit <b>' + hhmm(running) + '</b>'; return; }
+    if (running) { el.innerHTML = 'Stillen läuft seit <b>' + hhmm(running.start) + '</b>'; return; }
     if (!last) { el.textContent = ''; return; }
     el.innerHTML = 'Letztes Stillen <b>' + ago(Date.now() - last.end) + '</b>';
   }
@@ -174,33 +226,75 @@
     cancel.classList.toggle('show', !!running);
     if (tick) { clearInterval(tick); tick = null; }
     if (running) {
-      const upd = () => { big.querySelector('.clock').textContent = clock(Date.now() - running); };
+      const upd = () => { big.querySelector('.clock').textContent = clock(Date.now() - running.start); };
       upd(); big.querySelector('.lbl').textContent = 'Stopp';
       tick = setInterval(upd, 1000);
     } else {
       big.querySelector('.clock').textContent = 'Start';
       big.querySelector('.lbl').textContent = 'Stillen';
     }
-    renderSince(items.filter(i => !i.deleted).sort((a, b) => b.start - a.start)[0]);
+    renderSince(feeds()[0]);
   }
   big.addEventListener('click', () => {
-    if (!running) { running = Date.now(); saveRunning(); syncButton(); return; }
+    if (!running) { running = { start: Date.now(), child_id: db.active_child }; saveRunning(); syncButton(); return; }
     const end = Date.now();
-    if (end - running >= 10000) {   // shorter than 10 s counts as a mis-tap
-      items.unshift({ id: end + Math.random().toString(36).slice(2, 6), start: running, end });
-      save();
-    }
+    if (end - running.start >= 10000) addEvent({ type: 'feed', child_id: running.child_id, start: running.start, end });   // < 10 s = mis-tap
     running = null; saveRunning(); armed = null;
     syncButton(); render();
   });
   cancel.addEventListener('click', () => { running = null; saveRunning(); syncButton(); });
+
+  // ---------- menu: export / import (the seam for Excel, Notion, Drive later) ----------
+  const sheet = $('sheet');
+  function download(name, text, mime) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: mime })); a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  }
+  const stamp = () => dayKey(Date.now());
+  $('menu').addEventListener('click', () => {
+    const f = feeds();
+    $('stats').textContent = f.length + ' Einträge · Kind: ' + (db.children.find(c => c.id === db.active_child) || {}).name;
+    sheet.classList.add('open'); history.pushState({ sheet: 1 }, '');
+  });
+  const closeSheet = () => sheet.classList.remove('open');
+  $('closeSheet').addEventListener('click', () => history.back());
+  sheet.addEventListener('click', e => { if (e.target === sheet) history.back(); });
+  window.addEventListener('popstate', closeSheet);
+  $('exportJson').addEventListener('click', () => download('stillzeit-' + stamp() + '.json', JSON.stringify(db, null, 2), 'application/json'));
+  $('exportCsv').addEventListener('click', () => {
+    const iso = ts => new Date(ts).toISOString();
+    const rows = [['type', 'child', 'start', 'end', 'minutes', 'value', 'unit', 'note']];
+    for (const e of db.events.filter(e => !e.deleted).sort((a, b) => a.start - b.start)) {
+      const child = (db.children.find(c => c.id === e.child_id) || {}).name || '';
+      rows.push([e.type, child, iso(e.start), e.end ? iso(e.end) : '', e.end ? mins(e.end - e.start) : '', e.value ?? '', e.unit ?? '', e.note ?? '']);
+    }
+    download('stillzeit-' + stamp() + '.csv', rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\n'), 'text/csv');
+  });
+  $('importJson').addEventListener('click', () => $('file').click());
+  $('file').addEventListener('change', async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try {
+      const inc = JSON.parse(await f.text());
+      if (inc.schema !== 2 || !Array.isArray(inc.events)) throw new Error('kein Stillzeit-Export');
+      for (const c of inc.children || []) if (!db.children.some(x => x.id === c.id)) db.children.push(c);
+      let n = 0;
+      for (const o of inc.events) {
+        const i = db.events.findIndex(x => x.id === o.id);
+        if (i < 0) { db.events.push(o); snap[o.id] = sigOf(o); n++; }
+        else if ((o.updated_at || 0) > (db.events[i].updated_at || 0)) { db.events[i] = o; snap[o.id] = sigOf(o); n++; }
+      }
+      save(); render(); $('stats').textContent = n + ' Einträge übernommen';
+    } catch (err) { $('stats').textContent = 'Import fehlgeschlagen: ' + err.message; }
+    e.target.value = '';
+  });
 
   // refresh "vor x min" once a minute, and after the phone wakes up
   setInterval(() => { if (!running) render(); }, 60000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { load(); syncButton(); render(); } });
 
   // ---------- boot ----------
-  load();
+  load(); save();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
   syncButton();
   render();
