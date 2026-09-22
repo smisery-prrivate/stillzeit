@@ -11,7 +11,7 @@
 <style>
   :root { --L: #3f7fbf; --Ld: #2f639a; --Lbg: #e4eef8; --R: #e0863a; --Rd: #b8661f; --Rbg: #fbeadb; --bg: #fbf6f3; --ink: #2b2530; --muted: #9a8f96; --accent: #e0607e; --accent-dark: #c44a68; --card: #fff; --line: #f0e4e6; }
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body { height: 100%; }
+  html, body { height: 100%; overscroll-behavior-y: none; }
   body { background: var(--bg); color: var(--ink); font-family: -apple-system, "Segoe UI", Roboto, sans-serif; display: flex; justify-content: center; }
   #app { width: 100%; max-width: 480px; min-height: 100%; padding: max(env(safe-area-inset-top), 16px) 16px 300px; }
   header { display: flex; align-items: center; justify-content: space-between; padding: 8px 4px 4px; }
@@ -65,6 +65,43 @@
   #cancel { height: 44px; padding: 0 18px; border: none; border-radius: 22px; background: transparent; color: var(--muted); font-size: 14px; visibility: hidden; }
   #cancel.show { visibility: visible; }
 
+  /* screen navigation */
+  .nav { display: flex; justify-content: center; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; font-weight: 600; height: 40px; user-select: none; cursor: pointer; letter-spacing: .02em; }
+  .nav[hidden] { display: none; }
+  .nav .tri { font-size: 10px; }
+  #navTop { margin: -8px 0 0; }
+  #navBottom { height: 34px; }
+
+  /* tap buttons for the other screens */
+  #taps { display: flex; gap: 12px; justify-content: center; }
+  #taps[hidden] { display: none; }
+  .tap { width: 140px; height: 140px; border-radius: 50%; border: none; color: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; box-shadow: 0 10px 28px rgba(43,37,48,.22); }
+  .tap:active { transform: scale(.97); }
+  .tap .big { font-size: 26px; font-weight: 800; line-height: 1.1; }
+  .tap .lbl { font-size: 13px; font-weight: 600; opacity: .9; }
+  #taps.n3 .tap { width: 106px; height: 106px; }
+  #taps.n3 .tap .big { font-size: 19px; }
+  .tap.pee { background: #d9a441; } .tap.poo { background: #8a6a4a; }
+  .tap.measure { background: #2a9d8f; }
+  .tap.fever { background: #d9534f; } .tap.cough { background: #5c7f9e; } .tap.note { background: #7a7580; }
+  .row .s.pee { background: #fbf0d6; color: #9a6f12; } .row .s.poo { background: #eee4da; color: #6b4d31; }
+  .row .s.fever { background: #fbe3e2; color: #a83632; } .row .s.cough { background: #e3ecf4; color: #3f5f7c; } .row .s.note, .row .s.measure { background: #eee; color: #666; }
+  .row .sub { font-size: 12px; color: var(--muted); margin-left: 8px; }
+  .row .note { flex: 1; font-size: 15px; }
+
+  /* value entry sheet */
+  #entry { position: fixed; inset: 0; background: rgba(43,37,48,.35); z-index: 10; display: none; align-items: flex-end; justify-content: center; }
+  #entry.open { display: flex; }
+  #entry .panel { width: 100%; max-width: 480px; background: var(--card); border-radius: 20px 20px 0 0; padding: 18px 16px calc(env(safe-area-inset-bottom) + 20px); }
+  #entry h2 { font-size: 18px; margin-bottom: 12px; }
+  #entry .valrow { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  #entry input { flex: 1; height: 56px; border: 1.5px solid var(--line); border-radius: 12px; padding: 0 14px; font: inherit; font-size: 24px; background: var(--card); color: var(--ink); }
+  #entry input:focus { outline: none; border-color: var(--accent); }
+  #entry .unit { font-size: 18px; color: var(--muted); min-width: 36px; }
+  #entry .btns { display: flex; gap: 8px; }
+  #entry .btns button { flex: 1; height: 52px; border: none; border-radius: 12px; font-size: 16px; background: var(--bg); color: var(--ink); }
+  #entry .btns button.primary { background: var(--accent); color: #fff; font-weight: 600; }
+
   /* menu sheet */
   #sheet { position: fixed; inset: 0; background: rgba(43,37,48,.35); z-index: 9; display: none; align-items: flex-end; justify-content: center; }
   #sheet.open { display: flex; }
@@ -80,21 +117,31 @@
 </head>
 <body>
 <div id="app">
+  <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1>Stillzeit</h1><div class="version">v7</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v8</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
   <div id="syncline"></div>
   <div id="list"></div>
-  <div id="empty" class="empty" hidden>Noch kein Eintrag.<br>Unten tippen, wenn das Stillen beginnt.</div>
+  <div id="empty" class="empty" hidden></div>
   <div class="dock">
     <div id="starts">
       <button class="side" id="startL"><span class="big">Links</span><span class="lbl">Start</span></button>
       <button class="side" id="startR"><span class="big">Rechts</span><span class="lbl">Start</span></button>
     </div>
     <button id="big" hidden><span class="clock">00:00</span><span class="lbl">Stopp</span></button>
+    <div id="taps" hidden></div>
     <button id="cancel">Verwerfen</button>
+    <div id="navBottom" class="nav" hidden><span class="tri">▼</span><span class="name"></span></div>
+  </div>
+</div>
+<div id="entry">
+  <div class="panel">
+    <h2 id="entryTitle"></h2>
+    <div class="valrow"><input id="entryVal"><span class="unit" id="entryUnit"></span></div>
+    <div class="btns"><button id="entryCancel">Abbrechen</button><button id="entrySave" class="primary">Speichern</button></div>
   </div>
 </div>
 <div id="sheet">
@@ -235,30 +282,100 @@
     const h = Math.floor(m / 60);
     return 'vor ' + h + ' h ' + (m % 60) + ' min';
   }
-  function dayColor(count) {           // more feeds per day → deeper tint (scale 0..16)
+  function dayColor(count, hue) {      // more entries per day → deeper tint (scale 0..16)
     const t = Math.min(count, 16) / 16;
     const light = 96 - t * 30;
-    return { bg: 'hsl(345 70% ' + light + '%)', fg: light < 78 ? '#fff' : '#7a2f47' };
+    const h = hue == null ? 345 : hue;
+    return { bg: 'hsl(' + h + ' 70% ' + light + '%)', fg: light < 78 ? '#fff' : (h === 345 ? '#7a2f47' : '#6b4a12') };
   }
+
+  // ---------- screens ----------
+  const SCREENS = [
+    { key: 'feed', title: 'Stillen', types: ['feed'], empty: 'Noch kein Eintrag.<br>Unten tippen, wenn das Stillen beginnt.' },
+    { key: 'diaper', title: 'Windel', types: ['pee', 'poo'], empty: 'Noch keine Windel.<br>Unten tippen: Urin oder Stuhl.',
+      buttons: [{ t: 'pee', label: 'Urin', cls: 'pee' }, { t: 'poo', label: 'Stuhl', cls: 'poo' }] },
+    { key: 'weight', title: 'Gewicht', types: ['weight'], empty: 'Noch kein Gewicht.<br>Unten tippen und eintragen.',
+      buttons: [{ t: 'weight', label: 'Gewicht', sub: 'eintragen', cls: 'measure', input: { unit: 'kg', placeholder: 'z.B. 3,45' } }] },
+    { key: 'height', title: 'Größe', types: ['height'], empty: 'Noch keine Größe.<br>Unten tippen und eintragen.',
+      buttons: [{ t: 'height', label: 'Größe', sub: 'eintragen', cls: 'measure', input: { unit: 'cm', placeholder: 'z.B. 52' } }] },
+    { key: 'med', title: 'Medizin', types: ['fever', 'cough', 'med'], empty: 'Nichts notiert.<br>Fieber messen, Husten antippen oder eine Notiz schreiben.',
+      buttons: [{ t: 'fever', label: 'Fieber', cls: 'fever', input: { unit: '°C', placeholder: 'z.B. 38,4' } }, { t: 'cough', label: 'Husten', cls: 'cough' }, { t: 'med', label: 'Notiz', cls: 'note', input: { text: true, placeholder: 'z.B. Schnupfen, Zäpfchen' } }] }
+  ];
+  const TYPE_LABEL = { pee: 'Urin', poo: 'Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', feed: 'Stillen' };
+  const TYPE_BADGE = { pee: 'U', poo: 'S', weight: 'kg', height: 'cm', fever: '°', cough: 'H', med: '✎' };
+  let screen = Math.max(0, SCREENS.findIndex(x => x.key === localStorage.getItem('stillzeit.screen')));
+  const cur = () => SCREENS[screen];
+  const fmtNum = (v, d) => Number(v).toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: d });
+  const valueLabel = e => e.type === 'weight' ? fmtNum(e.value, 3) + ' kg' : e.type === 'height' ? fmtNum(e.value, 1) + ' cm' : e.type === 'fever' ? fmtNum(e.value, 1) + ' °C' : '';
+  const ofScreen = sc => alive().filter(e => sc.types.includes(e.type) && (e.type !== 'feed' || (e.end && (e.end - e.start) >= minMs()))).sort((a, b) => b.start - a.start);
+
+  function goto(i) {
+    if (i < 0 || i >= SCREENS.length) return;
+    screen = i; armed = null; localStorage.setItem('stillzeit.screen', cur().key);
+    window.scrollTo(0, 0);
+    syncButton(); render();
+  }
+  $('navTop').addEventListener('click', () => goto(screen - 1));
+  $('navBottom').addEventListener('click', () => goto(screen + 1));
+  // vertical swipe: up = next screen (when the list is at its end or the swipe starts in the dock), down = previous (at the top)
+  let tsY = null, tsX = null, tsDock = false;
+  document.addEventListener('touchstart', e => { const t = e.touches[0]; tsY = t.clientY; tsX = t.clientX; tsDock = !!e.target.closest('.dock'); }, { passive: true });
+  document.addEventListener('touchend', e => {
+    if (tsY == null) return;
+    const t = e.changedTouches[0], dy = t.clientY - tsY, dx = t.clientX - tsX; tsY = null;
+    if (Math.abs(dx) > 60 || Math.abs(dy) < 70 || e.target.closest('#sheet, #entry')) return;
+    const atTop = window.scrollY <= 2, atEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+    if (dy < 0 && (tsDock || atEnd)) goto(screen + 1);
+    if (dy > 0 && (tsDock || atTop)) goto(screen - 1);
+  }, { passive: true });
 
   // ---------- render ----------
   function render() {
-    const rows0 = feeds();
+    const sc = cur();
+    $('title').textContent = sc.title;
+    const top = $('navTop'), bot = $('navBottom');
+    top.hidden = screen === 0; bot.hidden = screen === SCREENS.length - 1;
+    if (!top.hidden) top.querySelector('.name').textContent = SCREENS[screen - 1].title;
+    if (!bot.hidden) bot.querySelector('.name').textContent = SCREENS[screen + 1].title;
+    const rows0 = ofScreen(sc);
     const list = $('list');
     list.innerHTML = '';
     const groups = new Map();
     for (const it of rows0) { const k = dayKey(it.start); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(it); }
     for (const [k, rows] of groups) {
       const wrap = document.createElement('div'); wrap.className = 'day';
-      const total = rows.reduce((s, r) => s + (r.end - r.start), 0);
-      const col = dayColor(rows.length);
       const head = document.createElement('div'); head.className = 'dayhead';
-      head.style.background = col.bg; head.style.color = col.fg;
-      head.innerHTML = '<span>' + dayLabel(k) + '</span><span><span class="cnt">' + rows.length + ' mal</span> <span class="sum">· ' + durLabel(total) + ' gesamt</span></span>';
+      let right = '';
+      if (sc.key === 'feed') {
+        const total = rows.reduce((a, r) => a + (r.end - r.start), 0);
+        const col = dayColor(rows.length); head.style.background = col.bg; head.style.color = col.fg;
+        right = '<span class="cnt">' + rows.length + ' mal</span> <span class="sum">· ' + durLabel(total) + ' gesamt</span>';
+      } else if (sc.key === 'diaper') {
+        const u = rows.filter(r => r.type === 'pee').length, st = rows.filter(r => r.type === 'poo').length;
+        const col = dayColor(rows.length, 40); head.style.background = col.bg; head.style.color = col.fg;
+        right = '<span class="cnt">' + rows.length + ' mal</span> <span class="sum">· ' + u + ' Urin · ' + st + ' Stuhl</span>';
+      } else {
+        head.style.background = '#f1ece9'; head.style.color = '#6b6068';
+        right = '<span class="cnt">' + rows.length + '</span>';
+      }
+      head.innerHTML = '<span>' + dayLabel(k) + '</span><span>' + right + '</span>';
       wrap.appendChild(head);
       for (const it of rows) {
         const el = document.createElement('div'); el.className = 'row' + (armed === it.id ? ' armed' : '');
-        el.innerHTML = '<span class="s ' + (it.side || 'none') + '">' + (it.side || '') + '</span><span class="t">' + hhmm(it.start) + ' – ' + hhmm(it.end) + '</span><span class="d">' + durLabel(it.end - it.start) + '</span><button class="del">Löschen</button>';
+        let inner;
+        if (it.type === 'feed') {
+          inner = '<span class="s ' + (it.side || 'none') + '">' + (it.side || '') + '</span><span class="t">' + hhmm(it.start) + ' – ' + hhmm(it.end) + '</span><span class="d">' + durLabel(it.end - it.start) + '</span>';
+        } else if (it.type === 'pee' || it.type === 'poo' || it.type === 'cough') {
+          inner = '<span class="s ' + it.type + '">' + TYPE_BADGE[it.type] + '</span><span class="t">' + hhmm(it.start) + '</span><span class="d">' + TYPE_LABEL[it.type] + '</span>';
+        } else if (it.type === 'med') {
+          inner = '<span class="s note">' + TYPE_BADGE.med + '</span><span class="t">' + hhmm(it.start) + '</span><span class="note">' + escapeHtml(it.note || '') + '</span>';
+        } else {   // weight, height, fever: value with delta to the previous measurement
+          const prev = rows0.filter(r => r.type === it.type && r.start < it.start)[0];
+          let delta = '';
+          if (prev && it.type !== 'fever') { const d = it.value - prev.value; delta = '<span class="sub">' + (d >= 0 ? '+' : '−') + (it.type === 'weight' ? fmtNum(Math.abs(d) * 1000, 0) + ' g' : fmtNum(Math.abs(d), 1) + ' cm') + '</span>'; }
+          inner = '<span class="s ' + (it.type === 'fever' ? 'fever' : 'measure') + '">' + TYPE_BADGE[it.type] + '</span><span class="t">' + hhmm(it.start) + delta + '</span><span class="d">' + valueLabel(it) + '</span>';
+        }
+        el.innerHTML = inner + '<button class="del">Löschen</button>';
         el.addEventListener('click', e => {
           if (e.target.classList.contains('del')) { it.deleted = true; armed = null; save(); render(); return; }
           armed = armed === it.id ? null : it.id; render();
@@ -267,26 +384,51 @@
       }
       list.appendChild(wrap);
     }
+    $('empty').innerHTML = sc.empty;
     $('empty').hidden = rows0.length > 0;
     renderSince();
     renderSyncLine();
   }
+  const escapeHtml = t => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   function renderSince() {
-    const el = $('since'), run = runningFeed(), last = feeds()[0];
+    const el = $('since'), sc = cur(), run = runningFeed();
     const sideName = s => s === 'L' ? 'links' : s === 'R' ? 'rechts' : '';
-    if (run) { el.innerHTML = 'Stillen läuft seit <b>' + hhmm(run.start) + '</b>' + (run.side ? ' · ' + sideName(run.side) : ''); return; }
-    if (!last) { el.textContent = ''; return; }
-    el.innerHTML = 'Letztes Stillen <b>' + ago(Date.now() - last.end) + '</b>' + (last.side ? ' · ' + sideName(last.side) : '');
+    if (sc.key === 'feed') {
+      const last = feeds()[0];
+      if (run) { el.innerHTML = 'Stillen läuft seit <b>' + hhmm(run.start) + '</b>' + (run.side ? ' · ' + sideName(run.side) : ''); return; }
+      if (!last) { el.textContent = ''; return; }
+      el.innerHTML = 'Letztes Stillen <b>' + ago(Date.now() - last.end) + '</b>' + (last.side ? ' · ' + sideName(last.side) : '');
+      return;
+    }
+    const last = ofScreen(sc)[0];
+    const running = run ? '⏱ Stillen läuft · ' : '';
+    if (!last) { el.innerHTML = running; return; }
+    const what = sc.key === 'diaper' ? 'Letzte Windel' : sc.key === 'med' ? 'Letzter Eintrag' : 'Zuletzt';
+    const detail = sc.key === 'diaper' || sc.key === 'med' ? (last.type === 'med' ? '' : ' · ' + TYPE_LABEL[last.type]) : ' · ' + valueLabel(last);
+    el.innerHTML = running + what + ' <b>' + ago(Date.now() - last.start) + '</b>' + detail;
   }
 
-  // ---------- the one button ----------
-  const big = $('big'), cancel = $('cancel'), starts = $('starts');
+  // ---------- the dock: feed buttons or tap buttons per screen ----------
+  const big = $('big'), cancel = $('cancel'), starts = $('starts'), taps = $('taps');
   function syncButton() {
-    const run = runningFeed();
+    const sc = cur(), run = runningFeed();
+    if (tick) { clearInterval(tick); tick = null; }
+    if (sc.key !== 'feed') {
+      big.hidden = true; starts.hidden = true; cancel.classList.remove('show');
+      taps.hidden = false; taps.className = 'n' + sc.buttons.length; taps.innerHTML = '';
+      for (const b of sc.buttons) {
+        const el = document.createElement('button'); el.className = 'tap ' + b.cls;
+        el.innerHTML = '<span class="big">' + b.label + '</span><span class="lbl">' + (b.sub || 'antippen') + '</span>';
+        el.addEventListener('click', () => b.input ? openEntry(b) : (addEvent({ type: b.t, start: Date.now() }), render()));
+        taps.appendChild(el);
+      }
+      renderSince();
+      return;
+    }
+    taps.hidden = true;
     big.hidden = !run; starts.hidden = !!run;
     big.classList.remove('L', 'R'); if (run && run.side) big.classList.add(run.side);
     cancel.classList.toggle('show', !!run);
-    if (tick) { clearInterval(tick); tick = null; }
     if (run) {
       const upd = () => { big.querySelector('.clock').textContent = clock(Date.now() - run.start); };
       upd(); big.querySelector('.lbl').textContent = 'Stopp' + (run.side === 'L' ? ' · links' : run.side === 'R' ? ' · rechts' : '');
@@ -309,12 +451,37 @@
   big.addEventListener('click', () => {
     const run = runningFeed();
     if (!run) { syncButton(); return; }
-    const end = Date.now();
-    run.end = end;
+    run.end = Date.now();
     armed = null; save();
     syncButton(); render();
   });
   cancel.addEventListener('click', () => { const run = runningFeed(); if (run) { run.deleted = true; save(); } syncButton(); render(); });
+
+  // ---------- value entry (weight, height, fever, note) ----------
+  const entry = $('entry'); let entryBtn = null;
+  function openEntry(b) {
+    entryBtn = b;
+    $('entryTitle').textContent = b.label + (b.input.text ? '' : ' in ' + b.input.unit);
+    const inp = $('entryVal');
+    inp.value = ''; inp.placeholder = b.input.placeholder;
+    inp.type = 'text'; inp.inputMode = b.input.text ? 'text' : 'decimal';
+    $('entryUnit').textContent = b.input.text ? '' : b.input.unit;
+    entry.classList.add('open'); history.pushState({ entry: 1 }, '');
+    setTimeout(() => inp.focus(), 50);
+  }
+  function closeEntry() { entry.classList.remove('open'); $('entryVal').blur(); }
+  $('entryCancel').addEventListener('pointerdown', e => { e.preventDefault(); history.back(); });
+  $('entrySave').addEventListener('pointerdown', e => { e.preventDefault(); saveEntry(); });
+  $('entryVal').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); saveEntry(); } });
+  entry.addEventListener('click', e => { if (e.target === entry) history.back(); });
+  function saveEntry() {
+    const b = entryBtn; if (!b) return;
+    const raw = $('entryVal').value.trim();
+    if (b.input.text) { if (!raw) return; addEvent({ type: b.t, start: Date.now(), note: raw }); }
+    else { const v = Number(raw.replace(',', '.')); if (!raw || !isFinite(v) || v <= 0) return; addEvent({ type: b.t, start: Date.now(), value: v, unit: b.input.unit === '°C' ? 'C' : b.input.unit }); }
+    history.back(); render();
+  }
+  window.addEventListener('popstate', closeEntry);
 
   // ---------- sync: local-first, optional family account via Supabase ----------
   let session = null;

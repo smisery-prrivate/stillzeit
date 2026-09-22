@@ -4,7 +4,23 @@ Eine Baby-App, die im Alltag genau eine Sache kann: Stillen tracken, einhändig.
 ist sie so gebaut, dass mehr Tracker, mehrere Kinder, eine Familie mit mehreren Handys und
 Exporte nach Excel, Notion oder Drive dazukommen können, ohne das Datenmodell zu brechen.
 
-## Bedienregeln (v1, unverändert in v2)
+## Screens (seit v8)
+Die App ist ein senkrechter Stapel von fünf Screens, alle mit derselben Form (Statuszeile, Liste
+nach Tagen, große Buttons unten). Wechsel über die Pfeile ▲/▼ oben und unten oder Wischen nach
+oben/unten (nach oben, wenn die Liste am Ende ist oder der Wisch im Button-Bereich beginnt; nach
+unten, wenn die Liste oben ist). Der zuletzt offene Screen wird gemerkt.
+
+1. **Stillen** (type `feed`, unten beschrieben)
+2. **Windel**: zwei Buttons Urin (`pee`) und Stuhl (`poo`), ein Tipp = ein Eintrag mit Uhrzeit.
+   Tageskopf "5 mal · 3 Urin · 2 Stuhl", Farbe nach Anzahl (Bernstein).
+3. **Gewicht** (`weight`, value in kg): Button öffnet ein Eingabefeld, Komma erlaubt. Zeile zeigt
+   den Wert und die Differenz zur vorigen Messung in Gramm.
+4. **Größe** (`height`, value in cm): wie Gewicht, Differenz in cm.
+5. **Medizin**: Fieber (`fever`, value in °C), Husten (`cough`, ein Tipp), Notiz (`med`, Freitext).
+
+Alles landet im selben Event-Log, wird gleich gesynct und gleich exportiert.
+
+## Bedienregeln Stillen (v1, unverändert in v2)
 - Zwei runde Start-Buttons unten im Daumenbereich: **Links** und **Rechts** (Brustseite). Tipp =
   Stoppuhr startet; dann ein einziger dunkler Stopp-Button mit Zeit und Seite. Kein Formular.
   Die Seite, die beim letzten Mal nicht dran war, hat einen Ring als leisen Hinweis.
@@ -101,6 +117,7 @@ db = {
 - v5 (2026-09-22): Start-Buttons Links/Rechts, Seite in Zeilen, Statuszeile und CSV; Ring am Button für die andere Seite.
 - v6 (2026-09-22): Links blau, Rechts orange (komplementär, neutral, keine Wertung); unter einer Minute in Sekunden; 10-Sekunden-Regel entfernt; Einstellung "kürzer als X Sekunden ausblenden".
 - v7 (2026-09-22): Wake Lock im Vordergrund; Tageskopf "3 mal · 7 min gesamt".
+- v8 (2026-09-22): fünf Screens (Stillen, Windel, Gewicht, Größe, Medizin) mit Pfeilen und Wischen.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.
