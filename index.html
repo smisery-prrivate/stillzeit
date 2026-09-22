@@ -31,6 +31,8 @@
   .row { display: flex; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 6px; font-size: 16px; line-height: 1.35; user-select: none; }
   .row .t { flex: 1; font-variant-numeric: tabular-nums; }
   .row .d { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .row .s { width: 26px; height: 26px; border-radius: 50%; background: #fde8ee; color: var(--accent-dark); font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; margin-right: 12px; flex: none; }
+  .row .s.none { visibility: hidden; }
   .row .del { display: none; margin-left: 12px; height: 44px; padding: 0 14px; border: none; border-radius: 10px; background: #fde8ee; color: var(--accent-dark); font-size: 14px; font-weight: 600; }
   .row.armed .del { display: inline-block; }
   .row.armed { border-color: var(--accent); }
@@ -38,11 +40,18 @@
 
   /* big button in the thumb zone */
   .dock { position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; width: 100%; max-width: 480px; padding: 12px 16px calc(env(safe-area-inset-bottom) + 20px); z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 10px; background: linear-gradient(to top, var(--bg) 78%, rgba(251,246,243,0)); }
-  #big { width: 190px; height: 190px; border-radius: 50%; border: none; background: var(--accent); color: #fff; font-size: 26px; font-weight: 700; box-shadow: 0 12px 32px rgba(224,96,126,.45); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  #starts { display: flex; gap: 14px; }
+  #starts[hidden] { display: none; }
+  .side { width: 150px; height: 150px; border-radius: 50%; border: none; background: var(--accent); color: #fff; box-shadow: 0 10px 28px rgba(224,96,126,.4); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .side:active { transform: scale(.97); }
+  .side .big { font-size: 34px; font-weight: 800; line-height: 1.1; }
+  .side .lbl { font-size: 14px; font-weight: 600; opacity: .9; }
+  .side.hint { box-shadow: 0 10px 28px rgba(224,96,126,.4), 0 0 0 5px #fff, 0 0 0 8px var(--accent); }
+  #big { width: 190px; height: 190px; border-radius: 50%; border: none; background: var(--ink); color: #fff; font-size: 26px; font-weight: 700; box-shadow: 0 12px 32px rgba(43,37,48,.4); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; animation: breathe 2.4s ease-in-out infinite; }
+  #big[hidden] { display: none; }
   #big:active { transform: scale(.97); }
   #big .clock { font-size: 44px; font-variant-numeric: tabular-nums; letter-spacing: .02em; line-height: 1.1; }
   #big .lbl { font-size: 15px; font-weight: 600; opacity: .9; }
-  #big.running { background: var(--ink); box-shadow: 0 12px 32px rgba(43,37,48,.4); animation: breathe 2.4s ease-in-out infinite; }
   @keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.025); } }
   #cancel { height: 44px; padding: 0 18px; border: none; border-radius: 22px; background: transparent; color: var(--muted); font-size: 14px; visibility: hidden; }
   #cancel.show { visibility: visible; }
@@ -63,7 +72,7 @@
 <body>
 <div id="app">
   <header>
-    <div><h1>Stillzeit</h1><div class="version">v4</div></div>
+    <div><h1>Stillzeit</h1><div class="version">v5</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -71,7 +80,11 @@
   <div id="list"></div>
   <div id="empty" class="empty" hidden>Noch kein Eintrag.<br>Unten tippen, wenn das Stillen beginnt.</div>
   <div class="dock">
-    <button id="big"><span class="clock">Start</span><span class="lbl">Stillen</span></button>
+    <div id="starts">
+      <button class="side" id="startL"><span class="big">Links</span><span class="lbl">Start</span></button>
+      <button class="side" id="startR"><span class="big">Rechts</span><span class="lbl">Start</span></button>
+    </div>
+    <button id="big" hidden><span class="clock">00:00</span><span class="lbl">Stopp</span></button>
     <button id="cancel">Verwerfen</button>
   </div>
 </div>
@@ -230,7 +243,7 @@
       wrap.appendChild(head);
       for (const it of rows) {
         const el = document.createElement('div'); el.className = 'row' + (armed === it.id ? ' armed' : '');
-        el.innerHTML = '<span class="t">' + hhmm(it.start) + ' – ' + hhmm(it.end) + '</span><span class="d">' + durLabel(it.end - it.start) + '</span><button class="del">Löschen</button>';
+        el.innerHTML = '<span class="s' + (it.side ? '' : ' none') + '">' + (it.side || '') + '</span><span class="t">' + hhmm(it.start) + ' – ' + hhmm(it.end) + '</span><span class="d">' + durLabel(it.end - it.start) + '</span><button class="del">Löschen</button>';
         el.addEventListener('click', e => {
           if (e.target.classList.contains('del')) { it.deleted = true; armed = null; save(); render(); return; }
           armed = armed === it.id ? null : it.id; render();
@@ -245,31 +258,41 @@
   }
   function renderSince() {
     const el = $('since'), run = runningFeed(), last = feeds()[0];
-    if (run) { el.innerHTML = 'Stillen läuft seit <b>' + hhmm(run.start) + '</b>'; return; }
+    const sideName = s => s === 'L' ? 'links' : s === 'R' ? 'rechts' : '';
+    if (run) { el.innerHTML = 'Stillen läuft seit <b>' + hhmm(run.start) + '</b>' + (run.side ? ' · ' + sideName(run.side) : ''); return; }
     if (!last) { el.textContent = ''; return; }
-    el.innerHTML = 'Letztes Stillen <b>' + ago(Date.now() - last.end) + '</b>';
+    el.innerHTML = 'Letztes Stillen <b>' + ago(Date.now() - last.end) + '</b>' + (last.side ? ' · ' + sideName(last.side) : '');
   }
 
   // ---------- the one button ----------
-  const big = $('big'), cancel = $('cancel');
+  const big = $('big'), cancel = $('cancel'), starts = $('starts');
   function syncButton() {
     const run = runningFeed();
-    big.classList.toggle('running', !!run);
+    big.hidden = !run; starts.hidden = !!run;
     cancel.classList.toggle('show', !!run);
     if (tick) { clearInterval(tick); tick = null; }
     if (run) {
       const upd = () => { big.querySelector('.clock').textContent = clock(Date.now() - run.start); };
-      upd(); big.querySelector('.lbl').textContent = 'Stopp';
+      upd(); big.querySelector('.lbl').textContent = 'Stopp' + (run.side === 'L' ? ' · links' : run.side === 'R' ? ' · rechts' : '');
       tick = setInterval(upd, 1000);
     } else {
-      big.querySelector('.clock').textContent = 'Start';
-      big.querySelector('.lbl').textContent = 'Stillen';
+      // gentle hint: the side that was not used last time
+      const last = feeds()[0];
+      $('startL').classList.toggle('hint', !!last && last.side === 'R');
+      $('startR').classList.toggle('hint', !!last && last.side === 'L');
     }
     renderSince();
   }
+  function startFeed(side) {
+    if (runningFeed()) return;
+    addEvent({ type: 'feed', start: Date.now(), side });
+    syncButton();
+  }
+  $('startL').addEventListener('click', () => startFeed('L'));
+  $('startR').addEventListener('click', () => startFeed('R'));
   big.addEventListener('click', () => {
     const run = runningFeed();
-    if (!run) { addEvent({ type: 'feed', start: Date.now() }); syncButton(); return; }
+    if (!run) { syncButton(); return; }
     const end = Date.now();
     if (end - run.start >= 10000) run.end = end; else run.deleted = true;   // < 10 s = mis-tap
     armed = null; save();
@@ -499,10 +522,10 @@
   $('exportJson').addEventListener('click', () => download('stillzeit-' + stamp() + '.json', JSON.stringify(db, null, 2), 'application/json'));
   $('exportCsv').addEventListener('click', () => {
     const iso = ts => new Date(ts).toISOString();
-    const rows = [['type', 'child', 'start', 'end', 'minutes', 'value', 'unit', 'note']];
+    const rows = [['type', 'child', 'start', 'end', 'minutes', 'side', 'value', 'unit', 'note']];
     for (const e of db.events.filter(e => !e.deleted && (e.type !== 'feed' || e.end)).sort((a, b) => a.start - b.start)) {
       const child = (db.children.find(c => c.id === e.child_id) || {}).name || '';
-      rows.push([e.type, child, iso(e.start), e.end ? iso(e.end) : '', e.end ? mins(e.end - e.start) : '', e.value ?? '', e.unit ?? '', e.note ?? '']);
+      rows.push([e.type, child, iso(e.start), e.end ? iso(e.end) : '', e.end ? mins(e.end - e.start) : '', e.side ?? '', e.value ?? '', e.unit ?? '', e.note ?? '']);
     }
     download('stillzeit-' + stamp() + '.csv', rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\n'), 'text/csv');
   });
