@@ -61,22 +61,14 @@ alter table public.sz_members   enable row level security;
 alter table public.sz_children  enable row level security;
 alter table public.sz_events    enable row level security;
 
-drop policy if exists "sz hh select" on public.sz_households;
 create policy "sz hh select" on public.sz_households for select using (public.sz_is_member(id));
 
-drop policy if exists "sz mem select" on public.sz_members;
 create policy "sz mem select" on public.sz_members for select using (user_id = auth.uid() or public.sz_is_member(household_id));
 
-drop policy if exists "sz ch select" on public.sz_children;
-drop policy if exists "sz ch insert" on public.sz_children;
-drop policy if exists "sz ch update" on public.sz_children;
 create policy "sz ch select" on public.sz_children for select using (public.sz_is_member(household_id));
 create policy "sz ch insert" on public.sz_children for insert with check (public.sz_is_member(household_id));
 create policy "sz ch update" on public.sz_children for update using (public.sz_is_member(household_id));
 
-drop policy if exists "sz ev select" on public.sz_events;
-drop policy if exists "sz ev insert" on public.sz_events;
-drop policy if exists "sz ev update" on public.sz_events;
 create policy "sz ev select" on public.sz_events for select using (public.sz_is_member(household_id));
 create policy "sz ev insert" on public.sz_events for insert with check (public.sz_is_member(household_id));
 create policy "sz ev update" on public.sz_events for update using (public.sz_is_member(household_id));
