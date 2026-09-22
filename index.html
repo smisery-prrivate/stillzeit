@@ -90,6 +90,20 @@
   .row .sub { font-size: 12px; color: var(--muted); margin-left: 8px; }
   .row .note { flex: 1; font-size: 15px; }
 
+  /* dashboard */
+  .dcard { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; margin-bottom: 10px; cursor: pointer; user-select: none; }
+  .dcard .dh { display: flex; align-items: center; justify-content: space-between; }
+  .dcard .dt { font-size: 17px; font-weight: 700; }
+  .dcard .ds { font-size: 13px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+  .dcard .chev { color: var(--muted); font-size: 14px; transition: transform .15s; }
+  .dcard.open .chev { transform: rotate(180deg); }
+  .dcard .chart { display: none; margin-top: 12px; }
+  .dcard.open .chart { display: block; }
+  .chart svg { width: 100%; height: auto; display: block; }
+  .chart .cap { font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.4; }
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
   /* value entry sheet */
   #entry { position: fixed; inset: 0; background: rgba(43,37,48,.35); z-index: 10; display: none; align-items: flex-end; justify-content: center; }
   #entry.open { display: flex; }
@@ -120,7 +134,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v9</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v10</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -300,7 +314,8 @@
     { key: 'height', title: 'Größe', types: ['height'], empty: 'Noch keine Größe.<br>Unten tippen und eintragen.',
       buttons: [{ t: 'height', label: 'Größe', sub: 'eintragen', cls: 'measure', input: { unit: 'cm', placeholder: 'z.B. 52' } }] },
     { key: 'med', title: 'Medizin', types: ['fever', 'cough', 'med'], empty: 'Nichts notiert.<br>Fieber messen, Husten antippen oder eine Notiz schreiben.',
-      buttons: [{ t: 'fever', label: 'Fieber', cls: 'fever', input: { unit: '°C', placeholder: 'z.B. 38,4' } }, { t: 'cough', label: 'Husten', cls: 'cough' }, { t: 'med', label: 'Notiz', cls: 'note', input: { text: true, placeholder: 'z.B. Schnupfen, Zäpfchen' } }] }
+      buttons: [{ t: 'fever', label: 'Fieber', cls: 'fever', input: { unit: '°C', placeholder: 'z.B. 38,4' } }, { t: 'cough', label: 'Husten', cls: 'cough' }, { t: 'med', label: 'Notiz', cls: 'note', input: { text: true, placeholder: 'z.B. Schnupfen, Zäpfchen' } }] },
+    { key: 'dash', title: 'Übersicht', types: [], empty: '', buttons: [] }
   ];
   const TYPE_LABEL = { pee: 'Urin', poo: 'Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', feed: 'Stillen' };
   const TYPE_BADGE = { pee: 'U', poo: 'S', weight: 'kg', height: 'cm', fever: '°', cough: 'H', med: '✎' };
@@ -311,8 +326,8 @@
   const ofScreen = sc => alive().filter(e => sc.types.includes(e.type) && (e.type !== 'feed' || (e.end && (e.end - e.start) >= minMs()))).sort((a, b) => b.start - a.start);
 
   function goto(i) {
-    if (i < 0 || i >= SCREENS.length) return;
-    screen = i; armed = null; localStorage.setItem('stillzeit.screen', cur().key);
+    screen = (i + SCREENS.length) % SCREENS.length;   // circular: after the last screen comes the first
+    armed = null; localStorage.setItem('stillzeit.screen', cur().key);
     window.scrollTo(0, 0);
     syncButton(); render();
   }
@@ -334,12 +349,13 @@
     const sc = cur();
     $('title').textContent = sc.title;
     const top = $('navTop'), bot = $('navBottom');
-    top.hidden = screen === 0; bot.hidden = screen === SCREENS.length - 1;
-    if (!top.hidden) top.querySelector('.name').textContent = SCREENS[screen - 1].title;
-    if (!bot.hidden) bot.querySelector('.name').textContent = SCREENS[screen + 1].title;
-    const rows0 = ofScreen(sc);
+    top.hidden = false; bot.hidden = false;
+    top.querySelector('.name').textContent = SCREENS[(screen - 1 + SCREENS.length) % SCREENS.length].title;
+    bot.querySelector('.name').textContent = SCREENS[(screen + 1) % SCREENS.length].title;
     const list = $('list');
     list.innerHTML = '';
+    if (sc.key === 'dash') { renderDash(list); $('empty').hidden = true; renderSince(); renderSyncLine(); return; }
+    const rows0 = ofScreen(sc);
     const groups = new Map();
     for (const it of rows0) { const k = dayKey(it.start); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(it); }
     for (const [k, rows] of groups) {
@@ -400,8 +416,9 @@
       el.innerHTML = 'Letztes Stillen <b>' + ago(Date.now() - last.end) + '</b>' + (last.side ? ' · ' + sideName(last.side) : '');
       return;
     }
-    const last = ofScreen(sc)[0];
     const running = run ? '⏱ Stillen läuft · ' : '';
+    if (sc.key === 'dash') { el.innerHTML = running + 'Antippen zeigt die Grafik.'; return; }
+    const last = ofScreen(sc)[0];
     if (!last) { el.innerHTML = running; return; }
     const what = sc.key === 'diaper' ? 'Letzte Windel' : sc.key === 'med' ? 'Letzter Eintrag' : 'Zuletzt';
     const detail = sc.key === 'diaper' || sc.key === 'med' ? (last.type === 'med' ? '' : ' · ' + TYPE_LABEL[last.type]) : ' · ' + valueLabel(last);
@@ -415,6 +432,7 @@
     if (tick) { clearInterval(tick); tick = null; }
     if (sc.key !== 'feed') {
       big.hidden = true; starts.hidden = true; cancel.classList.remove('show');
+      if (!sc.buttons.length) { taps.hidden = true; renderSince(); return; }
       taps.hidden = false; taps.className = 'n' + sc.buttons.length; taps.innerHTML = '';
       for (const b of sc.buttons) {
         const el = document.createElement('button'); el.className = 'tap ' + b.cls;
@@ -456,6 +474,108 @@
     syncButton(); render();
   });
   cancel.addEventListener('click', () => { const run = runningFeed(); if (run) { run.deleted = true; save(); } syncButton(); render(); });
+
+  // ---------- dashboard: one card per area, tap opens its chart ----------
+  let dashOpen = localStorage.getItem('stillzeit.dash') || '';
+  const C = { feed: '#c44a68', L: '#3f7fbf', R: '#e0863a', pee: '#c9922e', poo: '#8f5f34', measure: '#2a9d8f', fever: '#d9534f', cough: '#5c7f9e', grid: '#ece5e1', ink: '#6b6068' };
+  const esc = escapeHtml;
+  const dayList = n => { const out = []; const d0 = new Date(); d0.setHours(0, 0, 0, 0); for (let i = n - 1; i >= 0; i--) { const d = new Date(d0.getTime() - i * 864e5); out.push({ key: dayKey(d), t: d, label: d.getDate() + '.' }); } return out; };
+  const byDay = (evs, n) => { const m = new Map(dayList(n).map(d => [d.key, []])); for (const e of evs) { const k = dayKey(e.start); if (m.has(k)) m.get(k).push(e); } return m; };
+  function svgBars(days, stacks, opts) {
+    // days: [{label}], stacks: per day an array of {v, color} bottom→top; single axis, thin rounded bars, 2px gaps
+    const W = 440, H = 170, padL = 48, padB = 22, padT = 18, n = days.length;
+    const max = Math.max(1, ...stacks.map(st => st.reduce((a, x) => a + x.v, 0)));
+    const nice = max <= 5 ? 5 : max <= 10 ? 10 : Math.ceil(max / 5) * 5;
+    const bw = Math.min(22, (W - padL) / n - 6), step = (W - padL) / n;
+    const y = v => padT + (H - padT - padB) * (1 - v / nice);
+    let g = '';
+    for (const gv of [nice / 2, nice]) g += `<line x1="${padL}" x2="${W}" y1="${y(gv)}" y2="${y(gv)}" stroke="${C.grid}"/><text x="${padL - 6}" y="${y(gv) + 4}" font-size="11" fill="${C.ink}" text-anchor="end">${opts.fmt ? opts.fmt(gv) : gv}</text>`;
+    let b = '';
+    stacks.forEach((st, i) => {
+      const x = padL + step * i + (step - bw) / 2; let base = 0; const tot = st.reduce((a, s) => a + s.v, 0);
+      st.forEach((seg, j) => {
+        if (seg.v <= 0) return;
+        const y1 = y(base + seg.v), y0 = y(base), h = Math.max(2, y0 - y1 - (j ? 2 : 0));
+        const r = j === st.length - 1 || st.slice(j + 1).every(x => x.v <= 0) ? 4 : 0;
+        b += `<rect x="${x}" y="${y1}" width="${bw}" height="${h}" rx="${r}" fill="${seg.color}"/>`;
+        base += seg.v;
+      });
+      if (tot > 0 && opts.labels) b += `<text x="${x + bw / 2}" y="${y(tot) - 5}" font-size="11" fill="${C.ink}" text-anchor="middle">${opts.labels(st, i)}</text>`;
+      if (i % (n > 10 ? 2 : 1) === 0 || i === n - 1) b += `<text x="${x + bw / 2}" y="${H - 6}" font-size="11" fill="${C.ink}" text-anchor="middle">${days[i].label}</text>`;
+    });
+    return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${g}${b}</svg>`;
+  }
+  function svgLine(points, opts) {
+    // points: [{t, v}] sorted by t; single series, 2px line, 8px markers, first/last labelled, optional reference line
+    const W = 440, H = 170, padL = 40, padR = 14, padB = 22, padT = 16;
+    if (!points.length) return '';
+    const t0 = points[0].t, t1 = Math.max(points[points.length - 1].t, t0 + 864e5);
+    let lo = Math.min(...points.map(p => p.v)), hi = Math.max(...points.map(p => p.v));
+    if (opts.ref != null) { lo = Math.min(lo, opts.ref); hi = Math.max(hi, opts.ref); }
+    const span = Math.max(hi - lo, opts.minSpan || 1); lo -= span * 0.15; hi += span * 0.15;
+    const x = t => padL + (W - padL - padR) * (t - t0) / (t1 - t0);
+    const y = v => padT + (H - padT - padB) * (1 - (v - lo) / (hi - lo));
+    let g = '';
+    for (const gv of [lo + (hi - lo) * 0.2, lo + (hi - lo) * 0.5, lo + (hi - lo) * 0.8]) g += `<line x1="${padL}" x2="${W - padR}" y1="${y(gv)}" y2="${y(gv)}" stroke="${C.grid}"/><text x="${padL - 6}" y="${y(gv) + 4}" font-size="11" fill="${C.ink}" text-anchor="end">${opts.fmt(gv)}</text>`;
+    if (opts.ref != null) g += `<line x1="${padL}" x2="${W - padR}" y1="${y(opts.ref)}" y2="${y(opts.ref)}" stroke="${C.ink}" stroke-dasharray="4 4"/><text x="${W - padR}" y="${y(opts.ref) - 4}" font-size="11" fill="${C.ink}" text-anchor="end">${opts.refLabel}</text>`;
+    const path = points.map((p, i) => (i ? 'L' : 'M') + x(p.t).toFixed(1) + ' ' + y(p.v).toFixed(1)).join(' ');
+    let m = `<path d="${path}" fill="none" stroke="${opts.color}" stroke-width="2" stroke-linejoin="round"/>`;
+    points.forEach((p, i) => {
+      m += `<circle cx="${x(p.t)}" cy="${y(p.v)}" r="4" fill="${opts.color}" stroke="#fff" stroke-width="2"/>`;
+      if (i === 0 || i === points.length - 1) m += `<text x="${x(p.t)}" y="${y(p.v) - 9}" font-size="11" fill="${C.ink}" text-anchor="${i ? 'end' : 'start'}">${opts.fmt(p.v)}</text>`;
+    });
+    const dl = t => { const d = new Date(t); return d.getDate() + '.' + (d.getMonth() + 1) + '.'; };
+    m += `<text x="${padL}" y="${H - 6}" font-size="11" fill="${C.ink}">${dl(t0)}</text><text x="${W - padR}" y="${H - 6}" font-size="11" fill="${C.ink}" text-anchor="end">${dl(points[points.length - 1].t)}</text>`;
+    return `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${g}${m}</svg>`;
+  }
+  const legend = items => '<div class="legend">' + items.map(i => '<span><i style="background:' + i.c + '"></i>' + i.l + '</span>').join('') + '</div>';
+  function dashCards() {
+    const N = 14, days = dayList(N), today = dayKey(Date.now());
+    const cards = [];
+    // Stillen
+    {
+      const f = feeds(); const m = byDay(f, N); const tf = m.get(today) || [];
+      const w7 = days.slice(-7).map(d => m.get(d.key)); const avgN = w7.reduce((a, r) => a + r.length, 0) / 7; const avgM = w7.reduce((a, r) => a + r.reduce((x, e) => x + (e.end - e.start), 0), 0) / 7;
+      const stacks = days.map(d => { const r = m.get(d.key); return [{ v: r.filter(e => e.side === 'L').reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.L }, { v: r.filter(e => e.side === 'R').reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.R }, { v: r.filter(e => !e.side).reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.feed }]; });
+      cards.push({ key: 'feed', title: 'Stillen', sum: 'Heute ' + tf.length + ' mal · ' + durLabel(tf.reduce((a, e) => a + (e.end - e.start), 0)) + '<br>Ø letzte 7 Tage: ' + fmtNum(avgN, 1) + ' mal · ' + durLabel(avgM) + ' pro Tag',
+        chart: f.length ? legend([{ c: C.L, l: 'links' }, { c: C.R, l: 'rechts' }]) + svgBars(days, stacks, { fmt: v => v + ' min', labels: (st, i) => m.get(days[i].key).length + '×' }) + '<div class="cap">Minuten pro Tag, letzte 14 Tage. Die Zahl über dem Balken ist die Anzahl.</div>' : '<div class="cap">Noch keine Daten.</div>' });
+    }
+    // Windel
+    {
+      const evs = alive().filter(e => e.type === 'pee' || e.type === 'poo'); const m = byDay(evs, N); const t = m.get(today) || [];
+      const stacks = days.map(d => { const r = m.get(d.key); return [{ v: r.filter(e => e.type === 'pee').length, color: C.pee }, { v: r.filter(e => e.type === 'poo').length, color: C.poo }]; });
+      cards.push({ key: 'diaper', title: 'Windel', sum: 'Heute ' + t.length + ' mal · ' + t.filter(e => e.type === 'pee').length + ' Urin · ' + t.filter(e => e.type === 'poo').length + ' Stuhl',
+        chart: evs.length ? legend([{ c: C.pee, l: 'Urin' }, { c: C.poo, l: 'Stuhl' }]) + svgBars(days, stacks, { labels: st => st.reduce((a, x) => a + x.v, 0) }) + '<div class="cap">Windeln pro Tag, letzte 14 Tage.</div>' : '<div class="cap">Noch keine Daten.</div>' });
+    }
+    // Gewicht / Größe
+    for (const [key, title, unit, fmt] of [['weight', 'Gewicht', 'kg', v => fmtNum(v, 2) + ' kg'], ['height', 'Größe', 'cm', v => fmtNum(v, 1) + ' cm']]) {
+      const pts = alive().filter(e => e.type === key).sort((a, b) => a.start - b.start).map(e => ({ t: e.start, v: e.value }));
+      const last = pts[pts.length - 1], first = pts[0];
+      let sum = 'Noch kein Eintrag.';
+      if (last) { sum = 'Zuletzt ' + fmt(last.v) + ' · ' + ago(Date.now() - last.t); if (pts.length > 1) sum += '<br>Seit ' + new Date(first.t).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' }) + ': ' + (last.v >= first.v ? '+' : '−') + (key === 'weight' ? fmtNum(Math.abs(last.v - first.v) * 1000, 0) + ' g' : fmtNum(Math.abs(last.v - first.v), 1) + ' cm'); }
+      cards.push({ key, title, sum, chart: pts.length ? svgLine(pts, { color: C.measure, fmt: v => fmtNum(v, key === 'weight' ? 2 : 1), minSpan: key === 'weight' ? 0.5 : 5 }) + '<div class="cap">' + title + ' in ' + unit + ' über die Zeit.</div>' : '<div class="cap">Noch keine Daten.</div>' });
+    }
+    // Medizin
+    {
+      const fev = alive().filter(e => e.type === 'fever').sort((a, b) => a.start - b.start).map(e => ({ t: e.start, v: e.value }));
+      const cough = alive().filter(e => e.type === 'cough'); const m = byDay(cough, N);
+      const lastF = fev[fev.length - 1];
+      const sum = (lastF ? 'Fieber zuletzt ' + fmtNum(lastF.v, 1) + ' °C · ' + ago(Date.now() - lastF.t) : 'Kein Fieber eingetragen') + '<br>Husten: ' + cough.filter(e => dayKey(e.start) === today).length + ' mal heute';
+      let chart = '';
+      if (fev.length) chart += svgLine(fev, { color: C.fever, fmt: v => fmtNum(v, 1), minSpan: 2, ref: 38, refLabel: '38 °C' }) + '<div class="cap">Fieber in °C, gestrichelt die 38-Grad-Linie.</div>';
+      if (cough.length) chart += '<div style="height:10px"></div>' + svgBars(days, days.map(d => [{ v: m.get(d.key).length, color: C.cough }]), { labels: st => st[0].v }) + '<div class="cap">Husten pro Tag, letzte 14 Tage.</div>';
+      cards.push({ key: 'med', title: 'Medizin', sum, chart: chart || '<div class="cap">Noch keine Daten.</div>' });
+    }
+    return cards;
+  }
+  function renderDash(list) {
+    for (const c of dashCards()) {
+      const el = document.createElement('div'); el.className = 'dcard' + (dashOpen === c.key ? ' open' : '');
+      el.innerHTML = '<div class="dh"><div><div class="dt">' + c.title + '</div><div class="ds">' + c.sum + '</div></div><span class="chev">▼</span></div><div class="chart">' + c.chart + '</div>';
+      el.addEventListener('click', () => { dashOpen = dashOpen === c.key ? '' : c.key; localStorage.setItem('stillzeit.dash', dashOpen); render(); });
+      list.appendChild(el);
+    }
+  }
 
   // ---------- value entry (weight, height, fever, note) ----------
   const entry = $('entry'); let entryBtn = null;

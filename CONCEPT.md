@@ -5,7 +5,7 @@ ist sie so gebaut, dass mehr Tracker, mehrere Kinder, eine Familie mit mehreren 
 Exporte nach Excel, Notion oder Drive dazukommen können, ohne das Datenmodell zu brechen.
 
 ## Screens (seit v8)
-Die App ist ein senkrechter Stapel von fünf Screens, alle mit derselben Form (Statuszeile, Liste
+Die App ist ein senkrechter Stapel von sechs Screens (im Kreis: nach dem letzten kommt wieder der erste), alle mit derselben Form (Statuszeile, Liste
 nach Tagen, große Buttons unten). Wechsel über zwei Balken ▲/▼ oben und unten (56 px hoch, mit
 dem Namen des Nachbar-Screens) oder Wischen nach oben/unten **im Button-Bereich oder auf den
 Balken**. Über der Liste wird nicht gewischt, dort wird nur gescrollt (v8 versuchte "am Listenende
@@ -18,6 +18,11 @@ wischen", das fühlte sich unzuverlässig an). Der zuletzt offene Screen wird ge
    den Wert und die Differenz zur vorigen Messung in Gramm.
 4. **Größe** (`height`, value in cm): wie Gewicht, Differenz in cm.
 5. **Medizin**: Fieber (`fever`, value in °C), Husten (`cough`, ein Tipp), Notiz (`med`, Freitext).
+6. **Übersicht**: eine Karte pro Bereich mit Kurzfassung (heute, Ø 7 Tage, zuletzt). Antippen
+   klappt die Grafik auf: Stillen = Minuten pro Tag (links/rechts gestapelt, Anzahl als Zahl über
+   dem Balken), Windel = Urin/Stuhl gestapelt pro Tag, Gewicht und Größe = Linie über die Zeit,
+   Medizin = Fieberkurve mit 38-Grad-Linie und Husten pro Tag. Alles inline-SVG, eine Achse pro
+   Grafik, keine Bibliothek, offline.
 
 Alles landet im selben Event-Log, wird gleich gesynct und gleich exportiert.
 
@@ -120,6 +125,7 @@ db = {
 - v7 (2026-09-22): Wake Lock im Vordergrund; Tageskopf "3 mal · 7 min gesamt".
 - v8 (2026-09-22): fünf Screens (Stillen, Windel, Gewicht, Größe, Medizin) mit Pfeilen und Wischen.
 - v9 (2026-09-22): große Pfeil-Balken; Wischen nur im Button-Bereich und auf den Balken.
+- v10 (2026-09-22): Navigation im Kreis; Übersichts-Screen mit Diagrammen.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.
