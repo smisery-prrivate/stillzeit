@@ -62,7 +62,31 @@ db = {
   regelmäßig hochladen. Notion: eine Datenbank mit den Event-Feldern, `id` als Schlüssel für
   Upserts. Beides ist Export, nicht Wahrheit; die Wahrheit bleibt das lokale Log bzw. Supabase.
 
+## Familie und Sync (seit v3)
+- Local-first bleibt: ohne Anmeldung läuft alles wie vorher, nur auf diesem Handy.
+- Anmeldung per Magic Link (E-Mail), kein Passwort. Supabase-Projekt wird mit Brain Relieve
+  geteilt, alle Tabellen tragen das Präfix `sz_` (Schema in `supabase-schema.sql`).
+- Eine **Familie** (`sz_households`) hat einen Code wie `3F9A-B21C`. Wer angemeldet ist, legt
+  eine Familie an oder tritt mit dem Code bei. Mitglieder (`sz_members`) sehen und schreiben
+  dieselben Kinder und Einträge; Row Level Security prüft die Mitgliedschaft.
+- Zweites Handy mit **derselben** E-Mail: findet die Familie automatisch (Mitgliedschaft wird
+  beim Start nachgeschlagen).
+- **Laufendes Stillen ist ein Eintrag ohne `end`.** Dadurch sieht der Partner den laufenden
+  Timer und kann ihn auch stoppen. Der alte `stillzeit.running`-Key wurde beim Update migriert.
+- Beim Beitritt werden lokale Einträge auf das Kind der Familie umgehängt, wenn das Handy
+  vorher nur das Standardkind "Baby" hatte, und alle lokalen Zeilen auf "jetzt" gestempelt,
+  damit sie über jeden fremden Sync-Cursor steigen.
+- Sync-Schleife wie im Playbook: pull `updated_at > cursor`, merge (neuester gewinnt), push
+  lokale Zeilen `updated_at > cursor` als Upsert, Cursor pro Familie. Läuft nach jedem Speichern
+  (1,2 s Debounce), beim Start, jede Minute, beim Aufwachen des Handys, beim Online-Gehen.
+- Status ist sichtbar: Zeile unter "Letztes Stillen" ("✓ Familie synchron · vor 2 min",
+  "⏸ Offline", "⚠ Sync fehlgeschlagen") und Details im Menü.
+- Einmalige Einrichtung im Supabase-Dashboard: `supabase-schema.sql` im SQL-Editor ausführen und
+  die App-URL unter Auth → URL Configuration → Redirect URLs eintragen.
+
 ## Versionen
 - v1 (2026-09-21): Stoppuhr, Einträge, Tagesgruppen mit Farbe, "vor x min", Löschen.
 - v2 (2026-09-21): Schema 2 (Event-Log, Kinder, UUIDs, created_by), Menü mit JSON/CSV-Export
   und Import, Back-Button schließt das Menü. Bedienung unverändert.
+- v3 (2026-09-22): Familien-Sync über Supabase (Magic Link, Familien-Code, geteilte Kinder und
+  Einträge, laufender Timer auf beiden Handys), Sync-Status sichtbar.

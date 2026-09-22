@@ -18,8 +18,10 @@
   h1 { font-size: 20px; font-weight: 700; }
   .version { font-size: 11px; color: #d6c9cd; }
   .pill { height: 36px; padding: 0 14px; border: 1px solid var(--line); border-radius: 18px; background: var(--card); color: var(--muted); font-size: 13px; cursor: pointer; }
-  #since { font-size: 14px; color: var(--muted); padding: 0 4px 18px; min-height: 20px; }
+  #since { font-size: 14px; color: var(--muted); padding: 0 4px 4px; min-height: 20px; }
   #since b { color: var(--ink); font-weight: 600; }
+  #syncline { font-size: 12px; color: var(--muted); padding: 0 4px 16px; min-height: 16px; }
+  #syncline.err { color: var(--accent-dark); }
 
   /* day groups */
   .day { margin-bottom: 14px; }
@@ -48,18 +50,24 @@
   /* menu sheet */
   #sheet { position: fixed; inset: 0; background: rgba(43,37,48,.35); z-index: 9; display: none; align-items: flex-end; justify-content: center; }
   #sheet.open { display: flex; }
-  #sheet .panel { width: 100%; max-width: 480px; background: var(--card); border-radius: 20px 20px 0 0; padding: 16px 16px calc(env(safe-area-inset-bottom) + 20px); }
-  #sheet .panel button { display: block; width: 100%; height: 52px; border: none; border-radius: 12px; background: var(--bg); color: var(--ink); font-size: 16px; margin-bottom: 8px; text-align: left; padding: 0 16px; }
-  #sheet .panel .hint { font-size: 12px; color: var(--muted); padding: 4px 4px 12px; line-height: 1.4; }
+  #sheet .panel { width: 100%; max-width: 480px; max-height: 88vh; overflow-y: auto; background: var(--card); border-radius: 20px 20px 0 0; padding: 16px 16px calc(env(safe-area-inset-bottom) + 20px); }
+  .panel button { display: block; width: 100%; height: 52px; border: none; border-radius: 12px; background: var(--bg); color: var(--ink); font-size: 16px; margin-bottom: 8px; text-align: left; padding: 0 16px; }
+  .panel button.primary { background: var(--accent); color: #fff; font-weight: 600; }
+  .panel .hint { font-size: 12px; color: var(--muted); padding: 4px 4px 10px; line-height: 1.4; }
+  .panel .sec { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 14px 4px 8px; }
+  .panel input[type=text], .panel input[type=email] { width: 100%; height: 48px; border: 1.5px solid var(--line); border-radius: 12px; padding: 0 14px; font: inherit; font-size: 16px; margin-bottom: 8px; background: var(--card); color: var(--ink); }
+  .panel input:focus { outline: none; border-color: var(--accent); }
+  .code { font-size: 22px; font-weight: 700; letter-spacing: .12em; font-variant-numeric: tabular-nums; padding: 4px 4px 8px; }
 </style>
 </head>
 <body>
 <div id="app">
   <header>
-    <div><h1>Stillzeit</h1><div class="version">v2</div></div>
+    <div><h1>Stillzeit</h1><div class="version">v3</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
+  <div id="syncline"></div>
   <div id="list"></div>
   <div id="empty" class="empty" hidden>Noch kein Eintrag.<br>Unten tippen, wenn das Stillen beginnt.</div>
   <div class="dock">
@@ -70,6 +78,11 @@
 <div id="sheet">
   <div class="panel">
     <div class="hint" id="stats"></div>
+
+    <div class="sec">Familie &amp; Sync</div>
+    <div id="syncBox"></div>
+
+    <div class="sec">Daten</div>
     <button id="exportJson">Sicherung als JSON speichern</button>
     <button id="exportCsv">Als CSV exportieren</button>
     <button id="importJson">Sicherung wiederherstellen</button>
@@ -82,78 +95,95 @@
 (() => {
   'use strict';
   /* ------------------------------------------------------------------
-     Data model (schema 2). One flat event log, one store, all future
-     trackers are just new `type` values. See CONCEPT.md.
-       db = { schema, device_id, children: [{id,name,born,...}], events: [...] }
-       event = { id, type, child_id, start, end?, value?, unit?, note?,
+     Data model (schema 2). One flat event log; all trackers are `type`s.
+       db = { schema, device_id, household_id?, active_child, children, events }
+       event = { id, type, child_id, start, end?, value?, unit?, note?, side?,
                  created_by, created_at, updated_at, deleted? }
-     Types today: 'feed'. Later e.g. 'weight' (value+unit, no end),
-     'height', 'sleep' (start+end), 'diaper' (start only).
+     A running feed is a 'feed' event without `end` (so it syncs to the
+     partner's phone and either of them can stop it). See CONCEPT.md.
   ------------------------------------------------------------------ */
   const DB_KEY = 'stillzeit.db';
   const LEGACY_KEY = 'stillzeit.v1';
   const RUN_KEY = 'stillzeit.running';
+  const SESSION_KEY = 'stillzeit.session';
+  const CFG = window.APP_CONFIG || {};
+  const SYNC = CFG.supabaseUrl && CFG.supabaseKey ? { url: CFG.supabaseUrl, key: CFG.supabaseKey } : null;
   const $ = id => document.getElementById(id);
   const uid = () => (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + Math.random().toString(36).slice(2, 10));
 
   let db = null;
   let snap = {};
-  let running = null;  // { start, child_id } or null
   let armed = null;
   let tick = null;
 
   // ---------- storage ----------
   const sigOf = ev => { const c = Object.assign({}, ev); delete c.updated_at; return JSON.stringify(c); };
   function emptyDb() {
-    const child = { id: uid(), name: 'Baby', created_at: Date.now(), updated_at: Date.now() };
-    return { schema: 2, device_id: uid(), active_child: child.id, children: [child], events: [] };
+    const now = Date.now();
+    const child = { id: uid(), name: 'Baby', created_at: now, updated_at: now };
+    return { schema: 2, device_id: uid(), household_id: null, active_child: child.id, children: [child], events: [] };
   }
   function migrateLegacy(d) {
     let old = [];
-    try { old = JSON.parse(localStorage.getItem(LEGACY_KEY) || '[]'); } catch (e) { return; }
-    if (!old.length) return;
+    try { old = JSON.parse(localStorage.getItem(LEGACY_KEY) || '[]'); } catch (e) { old = []; }
     for (const it of old) if (!d.events.some(e => e.id === String(it.id))) {
       d.events.push({ id: String(it.id), type: 'feed', child_id: d.active_child, start: it.start, end: it.end,
         created_by: d.device_id, created_at: it.end, updated_at: it.updated_at || it.end, deleted: it.deleted || undefined });
     }
-    localStorage.removeItem(LEGACY_KEY);
+    if (old.length) localStorage.removeItem(LEGACY_KEY);
+    // v2 kept the running clock in its own key; v3 keeps it as an open event
+    let run = null;
+    try { run = JSON.parse(localStorage.getItem(RUN_KEY) || 'null'); } catch (e) { run = null; }
+    if (typeof run === 'number') run = { start: run, child_id: d.active_child };
+    if (run && run.start) d.events.unshift({ id: uid(), type: 'feed', child_id: run.child_id || d.active_child, start: run.start,
+      created_by: d.device_id, created_at: run.start, updated_at: Date.now() });
+    localStorage.removeItem(RUN_KEY);
   }
   function load() {
     try { db = JSON.parse(localStorage.getItem(DB_KEY) || 'null'); } catch (e) { db = null; }
     if (!db || db.schema !== 2) db = emptyDb();
+    if (!('household_id' in db)) db.household_id = null;
+    for (const c of db.children) if (!c.updated_at) c.updated_at = c.created_at || Date.now();
     migrateLegacy(db);
-    snap = {}; for (const ev of db.events) snap[ev.id] = sigOf(ev);
-    try { running = JSON.parse(localStorage.getItem(RUN_KEY) || 'null'); } catch (e) { running = null; }
-    if (typeof running === 'number') running = { start: running, child_id: db.active_child }; // pre-v2 format
+    snap = {}; for (const ev of db.events) snap[ev.id] = sigOf(ev); for (const c of db.children) snap['c:' + c.id] = sigOf(c);
+  }
+  function mergeInto(list, inc, key) {
+    const i = list.findIndex(x => x.id === inc.id);
+    if (i < 0) { list.push(inc); snap[key + inc.id] = sigOf(inc); return true; }
+    if ((inc.updated_at || 0) > (list[i].updated_at || 0)) { list[i] = inc; snap[key + inc.id] = sigOf(inc); return true; }
+    return false;
   }
   function mergeStored() {
     let stored = null;
     try { stored = JSON.parse(localStorage.getItem(DB_KEY) || 'null'); } catch (e) { return; }
     if (!stored || stored.schema !== 2) return;
-    for (const o of stored.events) {
-      const i = db.events.findIndex(x => x.id === o.id);
-      if (i < 0) { db.events.push(o); snap[o.id] = sigOf(o); }
-      else if ((o.updated_at || 0) > (db.events[i].updated_at || 0)) { db.events[i] = o; snap[o.id] = sigOf(o); }
-    }
+    for (const o of stored.events) mergeInto(db.events, o, '');
+    for (const c of stored.children || []) mergeInto(db.children, c, 'c:');
+    if (stored.household_id && !db.household_id) db.household_id = stored.household_id;
   }
   function save() {
     const now = Date.now();
     for (const ev of db.events) { const s = sigOf(ev); if (snap[ev.id] !== s) { ev.updated_at = now; snap[ev.id] = s; } }
+    for (const c of db.children) { const s = sigOf(c); if (snap['c:' + c.id] !== s) { c.updated_at = now; snap['c:' + c.id] = s; } }
     mergeStored();
     localStorage.setItem(DB_KEY, JSON.stringify(db));
+    scheduleSync();
   }
-  function saveRunning() { if (running) localStorage.setItem(RUN_KEY, JSON.stringify(running)); else localStorage.removeItem(RUN_KEY); }
   window.addEventListener('storage', e => {
-    if (e.key === DB_KEY) { mergeStored(); render(); }
-    if (e.key === RUN_KEY) { load(); syncButton(); }
+    if (e.key === DB_KEY) { mergeStored(); syncButton(); render(); }
+    if (e.key === SESSION_KEY) { try { session = JSON.parse(e.newValue || 'null'); } catch (err) {} renderSyncBox(); }
   });
 
   // ---------- queries ----------
-  const feeds = () => db.events.filter(e => e.type === 'feed' && !e.deleted && e.child_id === db.active_child).sort((a, b) => b.start - a.start);
+  const alive = () => db.events.filter(e => !e.deleted && e.child_id === db.active_child);
+  const feeds = () => alive().filter(e => e.type === 'feed' && e.end).sort((a, b) => b.start - a.start);
+  const runningFeed = () => alive().filter(e => e.type === 'feed' && !e.end).sort((a, b) => a.start - b.start)[0] || null;
   function addEvent(ev) {
     const now = Date.now();
-    db.events.unshift(Object.assign({ id: uid(), child_id: db.active_child, created_by: db.device_id, created_at: now, updated_at: now }, ev));
+    const full = Object.assign({ id: uid(), child_id: db.active_child, created_by: (session && session.uid) || db.device_id, created_at: now, updated_at: now }, ev);
+    db.events.unshift(full);
     save();
+    return full;
   }
 
   // ---------- formatting ----------
@@ -169,7 +199,7 @@
   }
   const mins = ms => Math.max(1, Math.round(ms / 60000));
   function durLabel(ms) { const m = mins(ms); return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min'; }
-  function clock(ms) { const s = Math.floor(ms / 1000); return pad(Math.floor(s / 60)) + ':' + pad(s % 60); }
+  function clock(ms) { const s = Math.max(0, Math.floor(ms / 1000)); return pad(Math.floor(s / 60)) + ':' + pad(s % 60); }
   function ago(ms) {
     const m = Math.floor(ms / 60000);
     if (m < 1) return 'gerade eben';
@@ -185,11 +215,11 @@
 
   // ---------- render ----------
   function render() {
-    const alive = feeds();
+    const rows0 = feeds();
     const list = $('list');
     list.innerHTML = '';
     const groups = new Map();
-    for (const it of alive) { const k = dayKey(it.start); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(it); }
+    for (const it of rows0) { const k = dayKey(it.start); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(it); }
     for (const [k, rows] of groups) {
       const wrap = document.createElement('div'); wrap.className = 'day';
       const total = rows.reduce((s, r) => s + (r.end - r.start), 0);
@@ -209,12 +239,13 @@
       }
       list.appendChild(wrap);
     }
-    $('empty').hidden = alive.length > 0;
-    renderSince(alive[0]);
+    $('empty').hidden = rows0.length > 0;
+    renderSince();
+    renderSyncLine();
   }
-  function renderSince(last) {
-    const el = $('since');
-    if (running) { el.innerHTML = 'Stillen läuft seit <b>' + hhmm(running.start) + '</b>'; return; }
+  function renderSince() {
+    const el = $('since'), run = runningFeed(), last = feeds()[0];
+    if (run) { el.innerHTML = 'Stillen läuft seit <b>' + hhmm(run.start) + '</b>'; return; }
     if (!last) { el.textContent = ''; return; }
     el.innerHTML = 'Letztes Stillen <b>' + ago(Date.now() - last.end) + '</b>';
   }
@@ -222,29 +253,229 @@
   // ---------- the one button ----------
   const big = $('big'), cancel = $('cancel');
   function syncButton() {
-    big.classList.toggle('running', !!running);
-    cancel.classList.toggle('show', !!running);
+    const run = runningFeed();
+    big.classList.toggle('running', !!run);
+    cancel.classList.toggle('show', !!run);
     if (tick) { clearInterval(tick); tick = null; }
-    if (running) {
-      const upd = () => { big.querySelector('.clock').textContent = clock(Date.now() - running.start); };
+    if (run) {
+      const upd = () => { big.querySelector('.clock').textContent = clock(Date.now() - run.start); };
       upd(); big.querySelector('.lbl').textContent = 'Stopp';
       tick = setInterval(upd, 1000);
     } else {
       big.querySelector('.clock').textContent = 'Start';
       big.querySelector('.lbl').textContent = 'Stillen';
     }
-    renderSince(feeds()[0]);
+    renderSince();
   }
   big.addEventListener('click', () => {
-    if (!running) { running = { start: Date.now(), child_id: db.active_child }; saveRunning(); syncButton(); return; }
+    const run = runningFeed();
+    if (!run) { addEvent({ type: 'feed', start: Date.now() }); syncButton(); return; }
     const end = Date.now();
-    if (end - running.start >= 10000) addEvent({ type: 'feed', child_id: running.child_id, start: running.start, end });   // < 10 s = mis-tap
-    running = null; saveRunning(); armed = null;
+    if (end - run.start >= 10000) run.end = end; else run.deleted = true;   // < 10 s = mis-tap
+    armed = null; save();
     syncButton(); render();
   });
-  cancel.addEventListener('click', () => { running = null; saveRunning(); syncButton(); });
+  cancel.addEventListener('click', () => { const run = runningFeed(); if (run) { run.deleted = true; save(); } syncButton(); render(); });
 
-  // ---------- menu: export / import (the seam for Excel, Notion, Drive later) ----------
+  // ---------- sync: local-first, optional family account via Supabase ----------
+  let session = null;
+  try { session = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (e) { session = null; }
+  let syncTimer = null, syncing = false, syncState = '', syncMsg = '';
+  const jwtPayload = t => JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+  function adoptSession(d) {
+    const p = jwtPayload(d.access_token);
+    session = { access_token: d.access_token, refresh_token: d.refresh_token, expires_at: p.exp, email: p.email, uid: p.sub };
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+  }
+  function dropSession() { session = null; localStorage.removeItem(SESSION_KEY); }
+  async function ensureSession() {
+    if (!SYNC || !session) return false;
+    if (Date.now() / 1000 < session.expires_at - 60) return true;
+    try {
+      const r = await fetch(SYNC.url + '/auth/v1/token?grant_type=refresh_token', {
+        method: 'POST', headers: { apikey: SYNC.key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: session.refresh_token })
+      });
+      if (!r.ok) {
+        let stored = null;
+        try { stored = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (err) { stored = null; }
+        if (stored && stored.access_token !== session.access_token) { session = stored; return Date.now() / 1000 < session.expires_at - 60; }
+        setSyncState('error', 'Anmeldung abgelaufen. Bitte neu anmelden.');
+        return false;
+      }
+      adoptSession(await r.json());
+      return true;
+    } catch (e) { return false; }
+  }
+  const restHeaders = extra => Object.assign({ apikey: SYNC.key, Authorization: 'Bearer ' + session.access_token, 'Content-Type': 'application/json' }, extra || {});
+  const rpc = async (fn, args) => {
+    const r = await fetch(SYNC.url + '/rest/v1/rpc/' + fn, { method: 'POST', headers: restHeaders(), body: JSON.stringify(args || {}) });
+    if (!r.ok) throw new Error((await r.text()).slice(0, 200));
+    return r.json();
+  };
+  const evToRow = e => ({ id: e.id, household_id: db.household_id, child_id: e.child_id, type: e.type, start_ts: e.start, end_ts: e.end || null,
+    value: e.value ?? null, unit: e.unit || null, note: e.note || null, side: e.side || null,
+    created_by: (session && session.uid) || null, created_at: e.created_at || e.start, updated_at: e.updated_at, deleted: !!e.deleted });
+  const rowToEv = r => { const e = { id: r.id, type: r.type, child_id: r.child_id, start: +r.start_ts, created_by: r.created_by, created_at: +r.created_at, updated_at: +r.updated_at };
+    if (r.end_ts != null) e.end = +r.end_ts; if (r.value != null) e.value = +r.value; if (r.unit) e.unit = r.unit; if (r.note) e.note = r.note; if (r.side) e.side = r.side; if (r.deleted) e.deleted = true; return e; };
+  const chToRow = c => ({ id: c.id, household_id: db.household_id, name: c.name, born: c.born || null, created_at: c.created_at || c.updated_at, updated_at: c.updated_at, deleted: !!c.deleted });
+  const rowToCh = r => { const c = { id: r.id, name: r.name, created_at: +r.created_at, updated_at: +r.updated_at }; if (r.born != null) c.born = +r.born; if (r.deleted) c.deleted = true; return c; };
+
+  function setSyncState(s, msg) { syncState = s; syncMsg = msg || ''; renderSyncLine(); renderSyncBox(); }
+  function scheduleSync() { if (!SYNC || !session || !db.household_id) return; clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 1200); }
+  const cursorKey = () => 'stillzeit.lastSync.' + db.household_id;
+  const okKey = () => 'stillzeit.lastOk.' + db.household_id;
+
+  // first contact with a household: adopt its children so both phones log the same baby
+  async function adoptHousehold(hid) {
+    db.household_id = hid;
+    const r = await fetch(`${SYNC.url}/rest/v1/sz_children?select=*&household_id=eq.${hid}&deleted=is.false&order=created_at.asc`, { headers: restHeaders() });
+    const remote = r.ok ? (await r.json()).map(rowToCh) : [];
+    const now = Date.now();
+    if (remote.length) {
+      const localDefault = db.children.find(c => c.id === db.active_child);
+      const target = remote[0];
+      if (localDefault && !remote.some(c => c.id === localDefault.id)) {
+        for (const e of db.events) if (e.child_id === localDefault.id) e.child_id = target.id;   // re-tag onto the family's child
+        db.children = db.children.filter(c => c.id !== localDefault.id);
+      }
+      for (const c of remote) mergeInto(db.children, c, 'c:');
+      db.active_child = target.id;
+    }
+    for (const c of db.children) { c.updated_at = now; snap['c:' + c.id] = sigOf(c); }
+    for (const e of db.events) { e.updated_at = now; snap[e.id] = sigOf(e); }   // old stock must rise above every cursor
+    localStorage.removeItem(cursorKey());
+    localStorage.setItem(DB_KEY, JSON.stringify(db));
+    await syncNow();
+  }
+  async function syncNow() {
+    if (!SYNC || !session || !db.household_id) return;
+    if (syncing) { scheduleSync(); return; }
+    syncing = true;
+    try {
+      if (!(await ensureSession())) return;
+      const hid = db.household_id, last = +localStorage.getItem(cursorKey()) || 0;
+      let maxSeen = last, changed = false;
+      const pulled = new Set();   // rows that just arrived need no push back
+      const pull = async (table, list, key, conv) => {
+        const res = await fetch(`${SYNC.url}/rest/v1/${table}?select=*&household_id=eq.${hid}&updated_at=gt.${last}&order=updated_at.asc`, { headers: restHeaders() });
+        if (!res.ok) throw new Error('pull ' + table + ' ' + res.status);
+        for (const r of await res.json()) { maxSeen = Math.max(maxSeen, +r.updated_at); const inc = conv(r); if (!mergeInto(list, inc, key)) continue; changed = true; pulled.add(key + inc.id); }
+      };
+      await pull('sz_children', db.children, 'c:', rowToCh);
+      await pull('sz_events', db.events, '', rowToEv);
+      const push = async (table, rows) => {
+        if (!rows.length) return;
+        const r = await fetch(`${SYNC.url}/rest/v1/${table}?on_conflict=household_id%2Cid`, { method: 'POST', headers: restHeaders({ Prefer: 'resolution=merge-duplicates' }), body: JSON.stringify(rows) });
+        if (!r.ok) throw new Error('push ' + table + ' ' + (await r.text()).slice(0, 120));
+        for (const d of rows) maxSeen = Math.max(maxSeen, d.updated_at);
+      };
+      await push('sz_children', db.children.filter(c => (c.updated_at || 0) > last && !pulled.has('c:' + c.id)).map(chToRow));
+      await push('sz_events', db.events.filter(e => (e.updated_at || 0) > last && !pulled.has(e.id)).map(evToRow));
+      localStorage.setItem(cursorKey(), maxSeen + '');
+      localStorage.setItem(okKey(), Date.now() + '');
+      if (changed) { localStorage.setItem(DB_KEY, JSON.stringify(db)); syncButton(); render(); }
+      setSyncState('ok');
+    } catch (e) {
+      setSyncState(navigator.onLine === false ? 'offline' : 'error', String(e.message || e));
+    } finally { syncing = false; }
+  }
+  async function sendMagicLink(email) {
+    const redirect = encodeURIComponent(location.origin + location.pathname);
+    const r = await fetch(`${SYNC.url}/auth/v1/otp?redirect_to=${redirect}`, {
+      method: 'POST', headers: { apikey: SYNC.key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, create_user: true })
+    });
+    return r.ok;
+  }
+  async function findMyHousehold() {          // second device of the same account: pick up the family automatically
+    try {
+      if (!(await ensureSession())) return null;
+      const r = await fetch(`${SYNC.url}/rest/v1/sz_members?select=household_id&user_id=eq.${session.uid}`, { headers: restHeaders() });
+      if (!r.ok) return null;
+      const rows = await r.json();
+      return rows.length ? rows[0].household_id : null;
+    } catch (e) { return null; }
+  }
+  let familyCode = null;
+  async function loadFamilyCode() {
+    if (!db.household_id || familyCode) return;
+    try {
+      const r = await fetch(`${SYNC.url}/rest/v1/sz_households?select=code&id=eq.${db.household_id}`, { headers: restHeaders() });
+      if (r.ok) { const rows = await r.json(); if (rows[0]) { familyCode = rows[0].code; renderSyncBox(); } }
+    } catch (e) {}
+  }
+  function lastOkLabel() {
+    const okAt = +localStorage.getItem(okKey()) || 0;
+    if (!okAt) return 'noch nie';
+    const m = Math.floor((Date.now() - okAt) / 60000);
+    return m < 1 ? 'gerade eben' : m < 60 ? 'vor ' + m + ' min' : 'vor ' + Math.floor(m / 60) + ' h';
+  }
+  function renderSyncLine() {
+    const el = $('syncline');
+    el.className = '';
+    if (!SYNC || !session || !db.household_id) { el.textContent = ''; return; }
+    if (syncState === 'error') { el.className = 'err'; el.textContent = '⚠ Sync fehlgeschlagen · zuletzt ' + lastOkLabel(); return; }
+    if (syncState === 'offline') { el.textContent = '⏸ Offline · zuletzt synchron ' + lastOkLabel(); return; }
+    el.textContent = '✓ Familie synchron · ' + lastOkLabel();
+  }
+  function renderSyncBox() {
+    const box = $('syncBox');
+    if (!SYNC) { box.innerHTML = '<div class="hint">Sync ist in dieser Version nicht konfiguriert.</div>'; return; }
+    if (!session) {
+      box.innerHTML = '<div class="hint">Mit E-Mail anmelden, dann können zwei Handys dieselben Einträge sehen.</div>' +
+        '<input id="email" type="email" placeholder="deine@email.de" autocomplete="email">' +
+        '<button id="sendLink" class="primary">Anmelde-Link schicken</button><div class="hint" id="authHint"></div>';
+      $('sendLink').addEventListener('click', async () => {
+        const email = $('email').value.trim();
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { $('authHint').textContent = 'Bitte eine gültige E-Mail eingeben.'; return; }
+        $('authHint').textContent = 'Schicke…';
+        const ok = await sendMagicLink(email);
+        $('authHint').textContent = ok ? 'Link ist unterwegs. Auf dem Handy öffnen, mit dem du die App nutzt.' : 'Senden fehlgeschlagen. Später nochmal.';
+      });
+      return;
+    }
+    if (!db.household_id) {
+      box.innerHTML = '<div class="hint">Angemeldet als ' + session.email + '. Jetzt eine Familie anlegen oder mit dem Code deines Partners beitreten.</div>' +
+        '<button id="mkFam" class="primary">Neue Familie anlegen</button>' +
+        '<input id="joinCode" type="text" placeholder="Code, z.B. 3F9A-B21C" autocapitalize="characters" autocomplete="off">' +
+        '<button id="joinFam">Mit Code beitreten</button><div class="hint" id="famHint"></div>' +
+        '<button id="signOut">Abmelden</button>';
+      $('mkFam').addEventListener('click', async () => {
+        $('famHint').textContent = 'Lege an…';
+        try { if (!(await ensureSession())) throw new Error('nicht angemeldet'); const j = await rpc('sz_create', { p_name: 'Familie' }); familyCode = j.code; await adoptHousehold(j.id); renderSyncBox(); }
+        catch (e) { $('famHint').textContent = 'Fehlgeschlagen: ' + e.message; }
+      });
+      $('joinFam').addEventListener('click', async () => {
+        const code = $('joinCode').value.trim().toUpperCase();
+        if (!code) { $('famHint').textContent = 'Bitte den Code eingeben.'; return; }
+        $('famHint').textContent = 'Trete bei…';
+        try { if (!(await ensureSession())) throw new Error('nicht angemeldet'); const j = await rpc('sz_join', { p_code: code }); familyCode = j.code; await adoptHousehold(j.id); renderSyncBox(); }
+        catch (e) { $('famHint').textContent = /unknown code/.test(e.message) ? 'Code unbekannt.' : 'Fehlgeschlagen: ' + e.message; }
+      });
+      $('signOut').addEventListener('click', () => { dropSession(); renderSyncBox(); renderSyncLine(); });
+      return;
+    }
+    const status = syncState === 'error' ? '⚠ Sync fehlgeschlagen' + (syncMsg ? ' (' + syncMsg + ')' : '') : syncState === 'offline' ? '⏸ Offline' : '✓ Synchron';
+    box.innerHTML = '<div class="hint">' + session.email + ' · ' + status + ' · zuletzt ' + lastOkLabel() + '</div>' +
+      '<div class="hint">Familien-Code für den Partner:</div><div class="code">' + (familyCode || '…') + '</div>' +
+      '<button id="shareCode" class="primary">Code teilen</button>' +
+      '<button id="syncBtn">Jetzt synchronisieren</button>' +
+      '<button id="leaveFam">Dieses Handy von der Familie trennen</button>';
+    $('shareCode').addEventListener('click', async () => {
+      const text = 'Stillzeit Familien-Code: ' + familyCode + '\n' + location.origin + location.pathname + '\nApp öffnen, ⋯ → anmelden → "Mit Code beitreten".';
+      if (navigator.share) { try { await navigator.share({ text }); } catch (e) {} }
+      else if (navigator.clipboard) { await navigator.clipboard.writeText(text); $('stats').textContent = 'Code kopiert.'; }
+    });
+    $('syncBtn').addEventListener('click', () => { syncNow().then(renderSyncBox); });
+    $('leaveFam').addEventListener('click', () => {
+      if (!confirm('Dieses Handy behält seine Einträge, synchronisiert aber nicht mehr. Fortfahren?')) return;
+      db.household_id = null; familyCode = null; localStorage.setItem(DB_KEY, JSON.stringify(db)); dropSession(); renderSyncBox(); renderSyncLine();
+    });
+    loadFamilyCode();
+  }
+
+  // ---------- menu: export / import ----------
   const sheet = $('sheet');
   function download(name, text, mime) {
     const a = document.createElement('a');
@@ -253,8 +484,8 @@
   }
   const stamp = () => dayKey(Date.now());
   $('menu').addEventListener('click', () => {
-    const f = feeds();
-    $('stats').textContent = f.length + ' Einträge · Kind: ' + (db.children.find(c => c.id === db.active_child) || {}).name;
+    $('stats').textContent = feeds().length + ' Einträge · Kind: ' + ((db.children.find(c => c.id === db.active_child) || {}).name || '');
+    renderSyncBox();
     sheet.classList.add('open'); history.pushState({ sheet: 1 }, '');
   });
   const closeSheet = () => sheet.classList.remove('open');
@@ -265,7 +496,7 @@
   $('exportCsv').addEventListener('click', () => {
     const iso = ts => new Date(ts).toISOString();
     const rows = [['type', 'child', 'start', 'end', 'minutes', 'value', 'unit', 'note']];
-    for (const e of db.events.filter(e => !e.deleted).sort((a, b) => a.start - b.start)) {
+    for (const e of db.events.filter(e => !e.deleted && (e.type !== 'feed' || e.end)).sort((a, b) => a.start - b.start)) {
       const child = (db.children.find(c => c.id === e.child_id) || {}).name || '';
       rows.push([e.type, child, iso(e.start), e.end ? iso(e.end) : '', e.end ? mins(e.end - e.start) : '', e.value ?? '', e.unit ?? '', e.note ?? '']);
     }
@@ -277,27 +508,40 @@
     try {
       const inc = JSON.parse(await f.text());
       if (inc.schema !== 2 || !Array.isArray(inc.events)) throw new Error('kein Stillzeit-Export');
-      for (const c of inc.children || []) if (!db.children.some(x => x.id === c.id)) db.children.push(c);
       let n = 0;
-      for (const o of inc.events) {
-        const i = db.events.findIndex(x => x.id === o.id);
-        if (i < 0) { db.events.push(o); snap[o.id] = sigOf(o); n++; }
-        else if ((o.updated_at || 0) > (db.events[i].updated_at || 0)) { db.events[i] = o; snap[o.id] = sigOf(o); n++; }
-      }
-      save(); render(); $('stats').textContent = n + ' Einträge übernommen';
+      for (const c of inc.children || []) if (mergeInto(db.children, c, 'c:')) n++;
+      for (const o of inc.events) if (mergeInto(db.events, o, '')) n++;
+      const now = Date.now();
+      for (const o of inc.events) { const ev = db.events.find(x => x.id === o.id); if (ev) { ev.updated_at = now; snap[ev.id] = sigOf(ev); } }
+      localStorage.setItem(DB_KEY, JSON.stringify(db)); scheduleSync(); syncButton(); render();
+      $('stats').textContent = n + ' Einträge übernommen';
     } catch (err) { $('stats').textContent = 'Import fehlgeschlagen: ' + err.message; }
     e.target.value = '';
   });
 
-  // refresh "vor x min" once a minute, and after the phone wakes up
-  setInterval(() => { if (!running) render(); }, 60000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) { load(); syncButton(); render(); } });
+  // refresh "vor x min" once a minute, pull the family's changes, and after the phone wakes up
+  setInterval(() => { render(); syncNow(); }, 60000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { load(); syncButton(); render(); syncNow(); } });
+  window.addEventListener('online', syncNow);
 
   // ---------- boot ----------
-  load(); save();
+  load();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+  // magic-link return: tokens arrive in the URL hash, never on the server
+  if (location.hash.includes('access_token=')) {
+    try {
+      const q = new URLSearchParams(location.hash.slice(1));
+      if (q.get('access_token') && q.get('refresh_token')) adoptSession({ access_token: q.get('access_token'), refresh_token: q.get('refresh_token') });
+    } catch (e) {}
+    history.replaceState(null, '', location.pathname);
+  }
+  localStorage.setItem(DB_KEY, JSON.stringify(db));
   syncButton();
   render();
+  if (SYNC && session) {
+    if (db.household_id) { syncNow(); loadFamilyCode(); }
+    else findMyHousehold().then(hid => { if (hid) return adoptHousehold(hid).then(() => { renderSyncBox(); loadFamilyCode(); }); });
+  }
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');
 })();
 </script>

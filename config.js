@@ -1,6 +1,7 @@
-// Public settings only (a publishable key is fine when the backend enforces row level security).
-// Leave APP_CONFIG empty until a second device is real; the app must work without it.
+// Stillzeit sync configuration. Shares the Brain Relieve Supabase project (tables prefixed sz_).
+// The publishable key is designed to be shipped publicly; row level security on the server
+// decides what a signed-in family member may read or write.
 window.APP_CONFIG = {
-  // supabaseUrl: 'https://<project>.supabase.co',
-  // supabaseKey: 'sb_publishable_...'
+  supabaseUrl: 'https://nqhzfommnfpxayjafits.supabase.co',
+  supabaseKey: 'sb_publishable_0BQhJS28t579EpTUavb43w_hiCWpwrW'
 };
