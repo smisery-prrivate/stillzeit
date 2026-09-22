@@ -63,7 +63,7 @@
 <body>
 <div id="app">
   <header>
-    <div><h1>Stillzeit</h1><div class="version">v3</div></div>
+    <div><h1>Stillzeit</h1><div class="version">v4</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -386,7 +386,11 @@
       method: 'POST', headers: { apikey: SYNC.key, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, create_user: true })
     });
-    return r.ok;
+    if (r.ok) return { ok: true };
+    let msg = 'Senden fehlgeschlagen. Später nochmal.';
+    if (r.status === 429) msg = 'Zu viele Anmelde-Mails in kurzer Zeit. In etwa einer Stunde nochmal versuchen.';
+    else { try { const j = await r.json(); if (j.msg) msg = 'Senden fehlgeschlagen: ' + j.msg; } catch (e) {} }
+    return { ok: false, msg };
   }
   async function findMyHousehold() {          // second device of the same account: pick up the family automatically
     try {
@@ -430,8 +434,8 @@
         const email = $('email').value.trim();
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { $('authHint').textContent = 'Bitte eine gültige E-Mail eingeben.'; return; }
         $('authHint').textContent = 'Schicke…';
-        const ok = await sendMagicLink(email);
-        $('authHint').textContent = ok ? 'Link ist unterwegs. Auf dem Handy öffnen, mit dem du die App nutzt.' : 'Senden fehlgeschlagen. Später nochmal.';
+        const res = await sendMagicLink(email);
+        $('authHint').textContent = res.ok ? 'Link ist unterwegs. Auf dem Handy öffnen, mit dem du die App nutzt.' : res.msg;
       });
       return;
     }

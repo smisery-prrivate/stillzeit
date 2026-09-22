@@ -90,3 +90,4 @@ db = {
   und Import, Back-Button schließt das Menü. Bedienung unverändert.
 - v3 (2026-09-22): Familien-Sync über Supabase (Magic Link, Familien-Code, geteilte Kinder und
   Einträge, laufender Timer auf beiden Handys), Sync-Status sichtbar.
+- v4 (2026-09-22): klare Fehlermeldung beim Anmelde-Link (Supabase-Mail-Limit, 429).

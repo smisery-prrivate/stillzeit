@@ -1,5 +1,5 @@
 // Bump CACHE on every release; keep it equal to the footer version label.
-const CACHE = 'stillzeit-v3';
+const CACHE = 'stillzeit-v4';
 const ASSETS = ['.', 'index.html', 'config.js', 'manifest.json', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
