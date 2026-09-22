@@ -18,6 +18,9 @@ Exporte nach Excel, Notion oder Drive dazukommen können, ohne das Datenmodell z
 - Zeilen sind nach Tag gruppiert. Die Tageskopfzeile zeigt Anzahl und Gesamtdauer; ihre Farbe
   wird mit der Anzahl kräftiger (Skala 0 bis 16 pro Tag).
 - Oben "Letztes Stillen vor x min".
+- Tageskopf: "3 mal · 42 min gesamt" (kein "3×", das liest sich wie eine Multiplikation).
+- Der Bildschirm bleibt an, solange die App im Vordergrund ist (Screen Wake Lock). Wechselt man in
+  eine andere App oder sperrt manuell, gibt das System die Sperre frei.
 - Zeile antippen → "Löschen"; Löschen ist ein Tombstone (deleted: true), nie ein echtes Entfernen.
 - Menü (⋯ oben rechts): Sicherung als JSON, Export als CSV, Sicherung wiederherstellen.
 - Sprache Deutsch, weil die Nutzer Deutsch sprechen.
@@ -97,6 +100,7 @@ db = {
 - v4 (2026-09-22): klare Fehlermeldung beim Anmelde-Link (Supabase-Mail-Limit, 429).
 - v5 (2026-09-22): Start-Buttons Links/Rechts, Seite in Zeilen, Statuszeile und CSV; Ring am Button für die andere Seite.
 - v6 (2026-09-22): Links blau, Rechts orange (komplementär, neutral, keine Wertung); unter einer Minute in Sekunden; 10-Sekunden-Regel entfernt; Einstellung "kürzer als X Sekunden ausblenden".
+- v7 (2026-09-22): Wake Lock im Vordergrund; Tageskopf "3 mal · 7 min gesamt".
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.

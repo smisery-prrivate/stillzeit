@@ -81,7 +81,7 @@
 <body>
 <div id="app">
   <header>
-    <div><h1>Stillzeit</h1><div class="version">v6</div></div>
+    <div><h1>Stillzeit</h1><div class="version">v7</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -254,7 +254,7 @@
       const col = dayColor(rows.length);
       const head = document.createElement('div'); head.className = 'dayhead';
       head.style.background = col.bg; head.style.color = col.fg;
-      head.innerHTML = '<span>' + dayLabel(k) + '</span><span><span class="cnt">' + rows.length + '×</span> <span class="sum">· ' + durLabel(total) + '</span></span>';
+      head.innerHTML = '<span>' + dayLabel(k) + '</span><span><span class="cnt">' + rows.length + ' mal</span> <span class="sum">· ' + durLabel(total) + ' gesamt</span></span>';
       wrap.appendChild(head);
       for (const it of rows) {
         const el = document.createElement('div'); el.className = 'row' + (armed === it.id ? ' armed' : '');
@@ -571,6 +571,15 @@
   setInterval(() => { render(); syncNow(); }, 60000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { load(); syncButton(); render(); syncNow(); } });
   window.addEventListener('online', syncNow);
+
+  // ---------- keep the screen on while the app is in front (released by the OS when another app comes up) ----------
+  let wakeLock = null;
+  async function keepAwake() {
+    if (!('wakeLock' in navigator) || document.hidden) return;
+    try { wakeLock = await navigator.wakeLock.request('screen'); wakeLock.addEventListener('release', () => { wakeLock = null; }); } catch (e) { wakeLock = null; }
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) keepAwake(); });
+  keepAwake();
 
   // ---------- boot ----------
   load();
