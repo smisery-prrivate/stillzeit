@@ -66,11 +66,12 @@
   #cancel.show { visibility: visible; }
 
   /* screen navigation */
-  .nav { display: flex; justify-content: center; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; font-weight: 600; height: 40px; user-select: none; cursor: pointer; letter-spacing: .02em; }
+  .nav { display: flex; justify-content: center; align-items: center; gap: 10px; color: var(--ink); font-size: 16px; font-weight: 600; height: 56px; border-radius: 16px; background: #f1ece9; user-select: none; cursor: pointer; letter-spacing: .01em; width: 100%; }
+  .nav:active { background: #e8e0dc; }
   .nav[hidden] { display: none; }
-  .nav .tri { font-size: 10px; }
-  #navTop { margin: -8px 0 0; }
-  #navBottom { height: 34px; }
+  .nav .tri { font-size: 20px; line-height: 1; color: var(--muted); }
+  #navTop { margin: 0 0 10px; }
+  #navBottom { margin-top: 2px; }
 
   /* tap buttons for the other screens */
   #taps { display: flex; gap: 12px; justify-content: center; }
@@ -119,7 +120,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v8</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v9</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -317,16 +318,15 @@
   }
   $('navTop').addEventListener('click', () => goto(screen - 1));
   $('navBottom').addEventListener('click', () => goto(screen + 1));
-  // vertical swipe: up = next screen (when the list is at its end or the swipe starts in the dock), down = previous (at the top)
-  let tsY = null, tsX = null, tsDock = false;
-  document.addEventListener('touchstart', e => { const t = e.touches[0]; tsY = t.clientY; tsX = t.clientX; tsDock = !!e.target.closest('.dock'); }, { passive: true });
+  // vertical swipe only where nothing scrolls: the button area at the bottom and the arrow bars.
+  // Up = next screen, down = previous. The list itself just scrolls.
+  let tsY = null, tsX = null, tsZone = false;
+  document.addEventListener('touchstart', e => { const t = e.touches[0]; tsY = t.clientY; tsX = t.clientX; tsZone = !!e.target.closest('.dock, .nav'); }, { passive: true });
   document.addEventListener('touchend', e => {
     if (tsY == null) return;
     const t = e.changedTouches[0], dy = t.clientY - tsY, dx = t.clientX - tsX; tsY = null;
-    if (Math.abs(dx) > 60 || Math.abs(dy) < 70 || e.target.closest('#sheet, #entry')) return;
-    const atTop = window.scrollY <= 2, atEnd = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
-    if (dy < 0 && (tsDock || atEnd)) goto(screen + 1);
-    if (dy > 0 && (tsDock || atTop)) goto(screen - 1);
+    if (!tsZone || Math.abs(dx) > Math.abs(dy) || Math.abs(dy) < 50 || e.target.closest('#sheet, #entry')) return;
+    if (dy < 0) goto(screen + 1); else goto(screen - 1);
   }, { passive: true });
 
   // ---------- render ----------

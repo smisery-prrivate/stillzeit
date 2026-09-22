@@ -6,9 +6,10 @@ Exporte nach Excel, Notion oder Drive dazukommen können, ohne das Datenmodell z
 
 ## Screens (seit v8)
 Die App ist ein senkrechter Stapel von fünf Screens, alle mit derselben Form (Statuszeile, Liste
-nach Tagen, große Buttons unten). Wechsel über die Pfeile ▲/▼ oben und unten oder Wischen nach
-oben/unten (nach oben, wenn die Liste am Ende ist oder der Wisch im Button-Bereich beginnt; nach
-unten, wenn die Liste oben ist). Der zuletzt offene Screen wird gemerkt.
+nach Tagen, große Buttons unten). Wechsel über zwei Balken ▲/▼ oben und unten (56 px hoch, mit
+dem Namen des Nachbar-Screens) oder Wischen nach oben/unten **im Button-Bereich oder auf den
+Balken**. Über der Liste wird nicht gewischt, dort wird nur gescrollt (v8 versuchte "am Listenende
+wischen", das fühlte sich unzuverlässig an). Der zuletzt offene Screen wird gemerkt.
 
 1. **Stillen** (type `feed`, unten beschrieben)
 2. **Windel**: zwei Buttons Urin (`pee`) und Stuhl (`poo`), ein Tipp = ein Eintrag mit Uhrzeit.
@@ -118,6 +119,7 @@ db = {
 - v6 (2026-09-22): Links blau, Rechts orange (komplementär, neutral, keine Wertung); unter einer Minute in Sekunden; 10-Sekunden-Regel entfernt; Einstellung "kürzer als X Sekunden ausblenden".
 - v7 (2026-09-22): Wake Lock im Vordergrund; Tageskopf "3 mal · 7 min gesamt".
 - v8 (2026-09-22): fünf Screens (Stillen, Windel, Gewicht, Größe, Medizin) mit Pfeilen und Wischen.
+- v9 (2026-09-22): große Pfeil-Balken; Wischen nur im Button-Bereich und auf den Balken.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.
