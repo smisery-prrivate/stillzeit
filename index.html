@@ -9,7 +9,7 @@
 <link rel="apple-touch-icon" href="icon-192.png">
 <title>Stillzeit</title>
 <style>
-  :root { --bg: #fbf6f3; --ink: #2b2530; --muted: #9a8f96; --accent: #e0607e; --accent-dark: #c44a68; --card: #fff; --line: #f0e4e6; }
+  :root { --L: #3f7fbf; --Ld: #2f639a; --Lbg: #e4eef8; --R: #e0863a; --Rd: #b8661f; --Rbg: #fbeadb; --bg: #fbf6f3; --ink: #2b2530; --muted: #9a8f96; --accent: #e0607e; --accent-dark: #c44a68; --card: #fff; --line: #f0e4e6; }
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; }
   body { background: var(--bg); color: var(--ink); font-family: -apple-system, "Segoe UI", Roboto, sans-serif; display: flex; justify-content: center; }
@@ -31,7 +31,11 @@
   .row { display: flex; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 6px; font-size: 16px; line-height: 1.35; user-select: none; }
   .row .t { flex: 1; font-variant-numeric: tabular-nums; }
   .row .d { font-weight: 600; font-variant-numeric: tabular-nums; }
-  .row .s { width: 26px; height: 26px; border-radius: 50%; background: #fde8ee; color: var(--accent-dark); font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; margin-right: 12px; flex: none; }
+  .row .s { width: 26px; height: 26px; border-radius: 50%; background: #eee; color: #666;
+  }
+  .row .s.L { background: var(--Lbg); color: var(--Ld); }
+  .row .s.R { background: var(--Rbg); color: var(--Rd); }
+  .row .s { font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; margin-right: 12px; flex: none; }
   .row .s.none { visibility: hidden; }
   .row .del { display: none; margin-left: 12px; height: 44px; padding: 0 14px; border: none; border-radius: 10px; background: #fde8ee; color: var(--accent-dark); font-size: 14px; font-weight: 600; }
   .row.armed .del { display: inline-block; }
@@ -42,11 +46,16 @@
   .dock { position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; width: 100%; max-width: 480px; padding: 12px 16px calc(env(safe-area-inset-bottom) + 20px); z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 10px; background: linear-gradient(to top, var(--bg) 78%, rgba(251,246,243,0)); }
   #starts { display: flex; gap: 14px; }
   #starts[hidden] { display: none; }
-  .side { width: 150px; height: 150px; border-radius: 50%; border: none; background: var(--accent); color: #fff; box-shadow: 0 10px 28px rgba(224,96,126,.4); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+  .side { width: 150px; height: 150px; border-radius: 50%; border: none; color: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
   .side:active { transform: scale(.97); }
   .side .big { font-size: 34px; font-weight: 800; line-height: 1.1; }
   .side .lbl { font-size: 14px; font-weight: 600; opacity: .9; }
-  .side.hint { box-shadow: 0 10px 28px rgba(224,96,126,.4), 0 0 0 5px #fff, 0 0 0 8px var(--accent); }
+  #startL { background: var(--L); box-shadow: 0 10px 28px rgba(63,127,191,.4); }
+  #startR { background: var(--R); box-shadow: 0 10px 28px rgba(224,134,58,.4); }
+  #startL.hint { box-shadow: 0 10px 28px rgba(63,127,191,.4), 0 0 0 5px #fff, 0 0 0 8px var(--L); }
+  #startR.hint { box-shadow: 0 10px 28px rgba(224,134,58,.4), 0 0 0 5px #fff, 0 0 0 8px var(--R); }
+  #big.L { background: var(--Ld); box-shadow: 0 12px 32px rgba(47,99,154,.45); }
+  #big.R { background: var(--Rd); box-shadow: 0 12px 32px rgba(184,102,31,.45); }
   #big { width: 190px; height: 190px; border-radius: 50%; border: none; background: var(--ink); color: #fff; font-size: 26px; font-weight: 700; box-shadow: 0 12px 32px rgba(43,37,48,.4); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; animation: breathe 2.4s ease-in-out infinite; }
   #big[hidden] { display: none; }
   #big:active { transform: scale(.97); }
@@ -64,7 +73,7 @@
   .panel button.primary { background: var(--accent); color: #fff; font-weight: 600; }
   .panel .hint { font-size: 12px; color: var(--muted); padding: 4px 4px 10px; line-height: 1.4; }
   .panel .sec { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 14px 4px 8px; }
-  .panel input[type=text], .panel input[type=email] { width: 100%; height: 48px; border: 1.5px solid var(--line); border-radius: 12px; padding: 0 14px; font: inherit; font-size: 16px; margin-bottom: 8px; background: var(--card); color: var(--ink); }
+  .panel input[type=text], .panel input[type=email], .panel input[type=number] { width: 100%; height: 48px; border: 1.5px solid var(--line); border-radius: 12px; padding: 0 14px; font: inherit; font-size: 16px; margin-bottom: 8px; background: var(--card); color: var(--ink); }
   .panel input:focus { outline: none; border-color: var(--accent); }
   .code { font-size: 22px; font-weight: 700; letter-spacing: .12em; font-variant-numeric: tabular-nums; padding: 4px 4px 8px; }
 </style>
@@ -72,7 +81,7 @@
 <body>
 <div id="app">
   <header>
-    <div><h1>Stillzeit</h1><div class="version">v5</div></div>
+    <div><h1>Stillzeit</h1><div class="version">v6</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -94,6 +103,10 @@
 
     <div class="sec">Familie &amp; Sync</div>
     <div id="syncBox"></div>
+
+    <div class="sec">Anzeige</div>
+    <div class="hint">Stillen kürzer als so viele Sekunden ausblenden (0 = alles zeigen). Die Einträge bleiben gespeichert.</div>
+    <input id="minSec" type="number" inputmode="numeric" min="0" step="1" placeholder="0">
 
     <div class="sec">Daten</div>
     <button id="exportJson">Sicherung als JSON speichern</button>
@@ -134,7 +147,7 @@
   function emptyDb() {
     const now = Date.now();
     const child = { id: uid(), name: 'Baby', created_at: now, updated_at: now };
-    return { schema: 2, device_id: uid(), household_id: null, active_child: child.id, children: [child], events: [] };
+    return { schema: 2, device_id: uid(), household_id: null, active_child: child.id, children: [child], events: [], settings: { minSeconds: 0 } };
   }
   function migrateLegacy(d) {
     let old = [];
@@ -156,6 +169,7 @@
     try { db = JSON.parse(localStorage.getItem(DB_KEY) || 'null'); } catch (e) { db = null; }
     if (!db || db.schema !== 2) db = emptyDb();
     if (!('household_id' in db)) db.household_id = null;
+    if (!db.settings) db.settings = { minSeconds: 0 };
     for (const c of db.children) if (!c.updated_at) c.updated_at = c.created_at || Date.now();
     migrateLegacy(db);
     snap = {}; for (const ev of db.events) snap[ev.id] = sigOf(ev); for (const c of db.children) snap['c:' + c.id] = sigOf(c);
@@ -189,7 +203,8 @@
 
   // ---------- queries ----------
   const alive = () => db.events.filter(e => !e.deleted && e.child_id === db.active_child);
-  const feeds = () => alive().filter(e => e.type === 'feed' && e.end).sort((a, b) => b.start - a.start);
+  const minMs = () => (Number(db.settings && db.settings.minSeconds) || 0) * 1000;
+  const feeds = () => alive().filter(e => e.type === 'feed' && e.end && (e.end - e.start) >= minMs()).sort((a, b) => b.start - a.start);
   const runningFeed = () => alive().filter(e => e.type === 'feed' && !e.end).sort((a, b) => a.start - b.start)[0] || null;
   function addEvent(ev) {
     const now = Date.now();
@@ -211,7 +226,7 @@
     return new Date(y, m - 1, d).toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' });
   }
   const mins = ms => Math.max(1, Math.round(ms / 60000));
-  function durLabel(ms) { const m = mins(ms); return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min'; }
+  function durLabel(ms) { if (ms < 60000) return Math.round(ms / 1000) + ' s'; const m = mins(ms); return m >= 60 ? Math.floor(m / 60) + ' h ' + (m % 60) + ' min' : m + ' min'; }
   function clock(ms) { const s = Math.max(0, Math.floor(ms / 1000)); return pad(Math.floor(s / 60)) + ':' + pad(s % 60); }
   function ago(ms) {
     const m = Math.floor(ms / 60000);
@@ -243,7 +258,7 @@
       wrap.appendChild(head);
       for (const it of rows) {
         const el = document.createElement('div'); el.className = 'row' + (armed === it.id ? ' armed' : '');
-        el.innerHTML = '<span class="s' + (it.side ? '' : ' none') + '">' + (it.side || '') + '</span><span class="t">' + hhmm(it.start) + ' – ' + hhmm(it.end) + '</span><span class="d">' + durLabel(it.end - it.start) + '</span><button class="del">Löschen</button>';
+        el.innerHTML = '<span class="s ' + (it.side || 'none') + '">' + (it.side || '') + '</span><span class="t">' + hhmm(it.start) + ' – ' + hhmm(it.end) + '</span><span class="d">' + durLabel(it.end - it.start) + '</span><button class="del">Löschen</button>';
         el.addEventListener('click', e => {
           if (e.target.classList.contains('del')) { it.deleted = true; armed = null; save(); render(); return; }
           armed = armed === it.id ? null : it.id; render();
@@ -269,6 +284,7 @@
   function syncButton() {
     const run = runningFeed();
     big.hidden = !run; starts.hidden = !!run;
+    big.classList.remove('L', 'R'); if (run && run.side) big.classList.add(run.side);
     cancel.classList.toggle('show', !!run);
     if (tick) { clearInterval(tick); tick = null; }
     if (run) {
@@ -294,7 +310,7 @@
     const run = runningFeed();
     if (!run) { syncButton(); return; }
     const end = Date.now();
-    if (end - run.start >= 10000) run.end = end; else run.deleted = true;   // < 10 s = mis-tap
+    run.end = end;
     armed = null; save();
     syncButton(); render();
   });
@@ -513,7 +529,12 @@
   $('menu').addEventListener('click', () => {
     $('stats').textContent = feeds().length + ' Einträge · Kind: ' + ((db.children.find(c => c.id === db.active_child) || {}).name || '');
     renderSyncBox();
+    $('minSec').value = db.settings.minSeconds || 0;
     sheet.classList.add('open'); history.pushState({ sheet: 1 }, '');
+  });
+  $('minSec').addEventListener('input', () => {
+    db.settings.minSeconds = Math.max(0, Math.floor(Number($('minSec').value) || 0));
+    localStorage.setItem(DB_KEY, JSON.stringify(db)); syncButton(); render();
   });
   const closeSheet = () => sheet.classList.remove('open');
   $('closeSheet').addEventListener('click', () => history.back());

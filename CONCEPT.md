@@ -10,7 +10,9 @@ Exporte nach Excel, Notion oder Drive dazukommen können, ohne das Datenmodell z
   Die Seite, die beim letzten Mal nicht dran war, hat einen Ring als leisen Hinweis.
 - Jede Zeile zeigt L oder R; "Letztes Stillen vor x min · links" sagt, welche Seite zuletzt war.
 - Läuft die Uhr, zeigt der Button die Zeit und atmet leicht; "Verwerfen" darunter bricht ab.
-- Stopp unter 10 Sekunden gilt als Fehltipp und wird nicht gespeichert.
+- Jeder Stopp wird gespeichert, auch nach 2 Sekunden. Im Menü unter "Anzeige" lässt sich einstellen,
+  dass Stillen kürzer als X Sekunden ausgeblendet wird (Standard 0 = alles zeigen). Ausgeblendete
+  Einträge bleiben in den Daten und im Export. (Die frühere 10-Sekunden-Regel verwirrte beim Ausprobieren.)
 - Der laufende Start liegt in localStorage: Bildschirm aus, App zu, Reload, die Uhr läuft weiter.
 - Jede Zeile ein Stillen: Start – Ende, Dauer. Neueste oben.
 - Zeilen sind nach Tag gruppiert. Die Tageskopfzeile zeigt Anzahl und Gesamtdauer; ihre Farbe
@@ -94,6 +96,7 @@ db = {
   Einträge, laufender Timer auf beiden Handys), Sync-Status sichtbar.
 - v4 (2026-09-22): klare Fehlermeldung beim Anmelde-Link (Supabase-Mail-Limit, 429).
 - v5 (2026-09-22): Start-Buttons Links/Rechts, Seite in Zeilen, Statuszeile und CSV; Ring am Button für die andere Seite.
+- v6 (2026-09-22): Links blau, Rechts orange (komplementär, neutral, keine Wertung); unter einer Minute in Sekunden; 10-Sekunden-Regel entfernt; Einstellung "kürzer als X Sekunden ausblenden".
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.
