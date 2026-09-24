@@ -81,7 +81,7 @@ declare
 begin
   if auth.uid() is null then raise exception 'not signed in'; end if;
   loop
-    v_code := upper(substr(encode(gen_random_bytes(6), 'hex'), 1, 4) || '-' || substr(encode(gen_random_bytes(6), 'hex'), 1, 4));
+    v_code := upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 4) || '-' || substr(replace(gen_random_uuid()::text, '-', ''), 1, 4));
     exit when not exists (select 1 from public.sz_households where code = v_code);
   end loop;
   insert into public.sz_households (name, code, created_by, created_at) values (coalesce(p_name, 'Familie'), v_code, auth.uid(), v_now) returning id into v_id;
