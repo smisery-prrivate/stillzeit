@@ -45,6 +45,12 @@ Alles landet im selben Event-Log, wird gleich gesynct und gleich exportiert.
   eine andere App oder sperrt manuell, gibt das System die Sperre frei.
 - Zeile antippen → "Löschen"; Löschen ist ein Tombstone (deleted: true), nie ein echtes Entfernen.
 - Menü (⋯ oben rechts): Sicherung als JSON, Export als CSV, Sicherung wiederherstellen.
+- **Alle Einträge löschen (seit v12)**: roter Button ganz unten im Menü, zeigt die Anzahl. Nach
+  der Rückfrage (in einer Familie mit Hinweis, dass es auch beim Partner löscht) passiert immer
+  in dieser Reihenfolge: JSON-Sicherung als Datei in die Downloads, eine Kopie in der App
+  (`stillzeit.backup.<zeit>`, nur die neueste), dann alle Einträge als Tombstones löschen.
+  Danach erscheint "Löschen rückgängig machen", das genau diese Einträge zurückholt (auch beim
+  Partner, weil es über denselben Sync läuft).
 - Sprache Deutsch, weil die Nutzer Deutsch sprechen.
 
 ## Datenmodell (Schema 2, seit v2)
@@ -138,6 +144,7 @@ db = {
 - v9 (2026-09-22): große Pfeil-Balken; Wischen nur im Button-Bereich und auf den Balken.
 - v10 (2026-09-22): Navigation im Kreis; Übersichts-Screen mit Diagrammen.
 - v11 (2026-09-24): Familie einrichten als geführter Weg, Einladungs-Link, Personenzahl, kein Sync-Knopf.
+- v12 (2026-09-24): Alle Einträge löschen mit automatischer Sicherung und Rückgängig.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.

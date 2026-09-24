@@ -138,6 +138,8 @@
   .famcard .ft { font-size: 16px; font-weight: 700; }
   .famcard .fs { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
   #syncline { cursor: pointer; }
+  .panel button.danger { background: #fdecef; color: #b0304f; font-weight: 600; margin-top: 18px; }
+  .panel button.undo { background: #eef6ef; color: #2d6a3e; font-weight: 600; }
   .code { font-size: 22px; font-weight: 700; letter-spacing: .12em; font-variant-numeric: tabular-nums; padding: 4px 4px 8px; }
 </style>
 </head>
@@ -145,7 +147,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v11</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v12</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -185,6 +187,9 @@
     <button id="exportJson">Sicherung als JSON speichern</button>
     <button id="exportCsv">Als CSV exportieren</button>
     <button id="importJson">Sicherung wiederherstellen</button>
+    <button id="undoReset" class="undo" hidden>Löschen rückgängig machen</button>
+    <button id="resetAll" class="danger">Alle Einträge löschen</button>
+    <div class="hint" id="resetHint"></div>
     <button id="closeSheet">Schließen</button>
     <input id="file" type="file" accept="application/json" hidden>
   </div>
@@ -880,7 +885,45 @@
     $('stats').textContent = feeds().length + ' Einträge · Kind: ' + ((db.children.find(c => c.id === db.active_child) || {}).name || '');
     renderSyncBox();
     $('minSec').value = db.settings.minSeconds || 0;
+    renderReset();
     sheet.classList.add('open'); history.pushState({ sheet: 1 }, '');
+  });
+
+  // ---------- reset: backup first (file + copy inside the app), then tombstone everything, undo possible ----------
+  const RESET_KEY = 'stillzeit.lastReset';
+  const liveEvents = () => db.events.filter(e => !e.deleted);
+  function lastReset() { try { return JSON.parse(localStorage.getItem(RESET_KEY) || 'null'); } catch (e) { return null; } }
+  function renderReset() {
+    const n = liveEvents().length, lr = lastReset();
+    $('resetAll').hidden = n === 0;
+    $('resetAll').textContent = 'Alle ' + n + ' Einträge löschen';
+    $('undoReset').hidden = !lr;
+    if (lr) $('undoReset').textContent = 'Löschen vom ' + new Date(lr.at).toLocaleString('de-DE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' rückgängig machen (' + lr.ids.length + ')';
+    if (!n && !lr) $('resetHint').textContent = '';
+  }
+  $('resetAll').addEventListener('click', () => {
+    const live = liveEvents();
+    if (!live.length) return;
+    const family = db.household_id ? '\n\nAchtung: Das löscht auch auf dem Handy deines Partners.' : '';
+    if (!confirm('Alle ' + live.length + ' Einträge löschen?\n\nVorher wird eine Sicherung als Datei gespeichert, und du kannst das Löschen im Menü rückgängig machen.' + family)) return;
+    // 1) backup as a file (Downloads) and 2) a copy inside the app
+    const at = Date.now();
+    download('stillzeit-sicherung-vor-loeschen-' + stamp() + '.json', JSON.stringify(db, null, 2), 'application/json');
+    try { localStorage.setItem('stillzeit.backup.' + at, JSON.stringify(db)); } catch (e) {}
+    for (const k of Object.keys(localStorage)) if (k.startsWith('stillzeit.backup.') && k !== 'stillzeit.backup.' + at) localStorage.removeItem(k);   // keep only the newest copy
+    localStorage.setItem(RESET_KEY, JSON.stringify({ at, ids: live.map(e => e.id) }));
+    // 3) delete as tombstones, so the deletion syncs and can be undone
+    for (const e of live) e.deleted = true;
+    armed = null; save(); syncButton(); render(); renderReset();
+    $('resetHint').textContent = 'Gelöscht. Sicherung liegt in deinen Downloads.';
+  });
+  $('undoReset').addEventListener('click', () => {
+    const lr = lastReset(); if (!lr) return;
+    const ids = new Set(lr.ids); let n = 0;
+    for (const e of db.events) if (ids.has(e.id) && e.deleted) { delete e.deleted; n++; }
+    localStorage.removeItem(RESET_KEY);
+    save(); syncButton(); render(); renderReset();
+    $('resetHint').textContent = n + ' Einträge sind wieder da.';
   });
   $('minSec').addEventListener('input', () => {
     db.settings.minSeconds = Math.max(0, Math.floor(Number($('minSec').value) || 0));
