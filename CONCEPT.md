@@ -108,6 +108,17 @@ db = {
 - Sync-Schleife wie im Playbook: pull `updated_at > cursor`, merge (neuester gewinnt), push
   lokale Zeilen `updated_at > cursor` als Upsert, Cursor pro Familie. Läuft nach jedem Speichern
   (1,2 s Debounce), beim Start, jede Minute, beim Aufwachen des Handys, beim Online-Gehen.
+- **Einrichtung als geführter Weg (seit v11)**, immer nur ein Schritt sichtbar:
+  1. Nicht angemeldet: E-Mail eingeben, "Anmelde-Link per Mail schicken". Nach dem Klick auf den
+     Link öffnet die App das Menü von selbst beim nächsten Schritt.
+  2. Angemeldet ohne Familie: Frage "Wer von euch beiden startet?" mit zwei Karten
+     "Ich starte" und "Ich wurde eingeladen" (erst dann erscheint das Code-Feld).
+  3. In der Familie: grüne Karte "✓ Familie verbunden · 2 Personen verbunden · gleicht sich von
+     selbst ab", Button "Partner einladen" teilt einen **Einladungs-Link** (`#join=CODE`). Wer
+     den Link öffnet, sieht "Du wurdest eingeladen", meldet sich an und ist danach automatisch
+     drin. Der Code steht klein darunter als Rückfall.
+  - Kein "Jetzt synchronisieren"-Knopf mehr: der Abgleich läuft automatisch. Wer es eilig hat,
+    tippt die Statuszeile unter dem Titel an.
 - Status ist sichtbar: Zeile unter "Letztes Stillen" ("✓ Familie synchron · vor 2 min",
   "⏸ Offline", "⚠ Sync fehlgeschlagen") und Details im Menü.
 - Einmalige Einrichtung im Supabase-Dashboard: `supabase-schema.sql` im SQL-Editor ausführen und
@@ -126,6 +137,7 @@ db = {
 - v8 (2026-09-22): fünf Screens (Stillen, Windel, Gewicht, Größe, Medizin) mit Pfeilen und Wischen.
 - v9 (2026-09-22): große Pfeil-Balken; Wischen nur im Button-Bereich und auf den Balken.
 - v10 (2026-09-22): Navigation im Kreis; Übersichts-Screen mit Diagrammen.
+- v11 (2026-09-24): Familie einrichten als geführter Weg, Einladungs-Link, Personenzahl, kein Sync-Knopf.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.

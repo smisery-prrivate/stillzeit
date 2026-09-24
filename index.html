@@ -127,6 +127,17 @@
   .panel .sec { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 14px 4px 8px; }
   .panel input[type=text], .panel input[type=email], .panel input[type=number] { width: 100%; height: 48px; border: 1.5px solid var(--line); border-radius: 12px; padding: 0 14px; font: inherit; font-size: 16px; margin-bottom: 8px; background: var(--card); color: var(--ink); }
   .panel input:focus { outline: none; border-color: var(--accent); }
+  .step { font-size: 15px; color: var(--ink); line-height: 1.45; padding: 2px 4px 12px; }
+  .step b { font-weight: 700; }
+  .panel button.choice { height: auto; padding: 14px 16px; line-height: 1.35; }
+  .panel button.choice .ct { display: block; font-size: 16px; font-weight: 700; }
+  .panel button.choice .cs { display: block; font-size: 13px; opacity: .8; margin-top: 2px; }
+  .panel button.quiet { height: 44px; background: transparent; color: var(--muted); font-size: 14px; text-align: center; }
+  .famcard { background: #eef6ef; border-radius: 14px; padding: 14px 16px; margin-bottom: 10px; }
+  .famcard.err { background: #fdecef; }
+  .famcard .ft { font-size: 16px; font-weight: 700; }
+  .famcard .fs { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+  #syncline { cursor: pointer; }
   .code { font-size: 22px; font-weight: 700; letter-spacing: .12em; font-variant-numeric: tabular-nums; padding: 4px 4px 8px; }
 </style>
 </head>
@@ -134,7 +145,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v10</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v11</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -747,63 +758,115 @@
     if (!SYNC || !session || !db.household_id) { el.textContent = ''; return; }
     if (syncState === 'error') { el.className = 'err'; el.textContent = '⚠ Sync fehlgeschlagen · zuletzt ' + lastOkLabel(); return; }
     if (syncState === 'offline') { el.textContent = '⏸ Offline · zuletzt synchron ' + lastOkLabel(); return; }
-    el.textContent = '✓ Familie synchron · ' + lastOkLabel();
+    el.textContent = '✓ Familie verbunden · abgeglichen ' + lastOkLabel();
+  }
+  // ---------- family setup: one question at a time ----------
+  const PENDING_KEY = 'stillzeit.pendingJoin';
+  let famStep = '';          // '' | 'join' (shows the code field)
+  let memberCount = null;
+  const inviteUrl = () => location.origin + location.pathname + '#join=' + encodeURIComponent(familyCode || '');
+  async function loadMembers() {
+    if (!db.household_id || !session) return;
+    try {
+      if (!(await ensureSession())) return;
+      const r = await fetch(`${SYNC.url}/rest/v1/sz_members?select=user_id&household_id=eq.${db.household_id}`, { headers: restHeaders() });
+      if (r.ok) { const n = (await r.json()).length; if (n !== memberCount) { memberCount = n; renderSyncBox(); } }
+    } catch (e) {}
+  }
+  async function joinWithCode(code, hintEl) {
+    code = String(code || '').trim().toUpperCase();
+    if (!code) { if (hintEl) hintEl.textContent = 'Bitte den Code eingeben.'; return false; }
+    if (hintEl) hintEl.textContent = 'Trete bei…';
+    try {
+      if (!(await ensureSession())) throw new Error('nicht angemeldet');
+      const j = await rpc('sz_join', { p_code: code });
+      familyCode = j.code; localStorage.removeItem(PENDING_KEY);
+      await adoptHousehold(j.id); memberCount = null; loadMembers(); renderSyncBox();
+      return true;
+    } catch (e) {
+      const msg = /unknown code/.test(e.message) ? 'Diesen Code gibt es nicht. Bitte nochmal prüfen.' : 'Beitreten fehlgeschlagen: ' + e.message;
+      if (hintEl) hintEl.textContent = msg; else $('stats').textContent = msg;
+      localStorage.removeItem(PENDING_KEY);
+      return false;
+    }
   }
   function renderSyncBox() {
     const box = $('syncBox');
-    if (!SYNC) { box.innerHTML = '<div class="hint">Sync ist in dieser Version nicht konfiguriert.</div>'; return; }
+    if (!SYNC) { box.innerHTML = '<div class="hint">Teilen ist in dieser Version nicht eingerichtet.</div>'; return; }
+    const pending = localStorage.getItem(PENDING_KEY);
+
+    // 1) not signed in
     if (!session) {
-      box.innerHTML = '<div class="hint">Mit E-Mail anmelden, dann können zwei Handys dieselben Einträge sehen.</div>' +
+      box.innerHTML = (pending
+          ? '<div class="step"><b>Du wurdest eingeladen.</b> Melde dich einmal mit deiner E-Mail an. Danach bist du automatisch in der Familie.</div>'
+          : '<div class="step">Mit dem Partner teilen: beide Handys sehen dieselben Einträge. Dafür einmal mit E-Mail anmelden, ohne Passwort.</div>') +
         '<input id="email" type="email" placeholder="deine@email.de" autocomplete="email">' +
-        '<button id="sendLink" class="primary">Anmelde-Link schicken</button><div class="hint" id="authHint"></div>';
+        '<button id="sendLink" class="primary">Anmelde-Link per Mail schicken</button><div class="hint" id="authHint"></div>';
       $('sendLink').addEventListener('click', async () => {
         const email = $('email').value.trim();
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { $('authHint').textContent = 'Bitte eine gültige E-Mail eingeben.'; return; }
         $('authHint').textContent = 'Schicke…';
         const res = await sendMagicLink(email);
-        $('authHint').textContent = res.ok ? 'Link ist unterwegs. Auf dem Handy öffnen, mit dem du die App nutzt.' : res.msg;
+        $('authHint').innerHTML = res.ok ? '<b>Mail ist unterwegs.</b> Öffne den Link darin auf diesem Handy. Die App geht dann von selbst weiter.' : res.msg;
       });
       return;
     }
+
+    // 2) signed in, not yet in a family
     if (!db.household_id) {
-      box.innerHTML = '<div class="hint">Angemeldet als ' + session.email + '. Jetzt eine Familie anlegen oder mit dem Code deines Partners beitreten.</div>' +
-        '<button id="mkFam" class="primary">Neue Familie anlegen</button>' +
-        '<input id="joinCode" type="text" placeholder="Code, z.B. 3F9A-B21C" autocapitalize="characters" autocomplete="off">' +
-        '<button id="joinFam">Mit Code beitreten</button><div class="hint" id="famHint"></div>' +
-        '<button id="signOut">Abmelden</button>';
+      if (pending) { box.innerHTML = '<div class="step">Trete der Familie bei…</div>'; return; }
+      if (famStep === 'join') {
+        box.innerHTML = '<div class="step">Gib den Code ein, den dein Partner dir geschickt hat.</div>' +
+          '<input id="joinCode" type="text" placeholder="z.B. 3F9A-B21C" autocapitalize="characters" autocomplete="off">' +
+          '<button id="joinFam" class="primary">Beitreten</button><div class="hint" id="famHint"></div>' +
+          '<button id="back" class="quiet">Zurück</button>';
+        $('joinFam').addEventListener('click', () => joinWithCode($('joinCode').value, $('famHint')));
+        $('back').addEventListener('click', () => { famStep = ''; renderSyncBox(); });
+        setTimeout(() => $('joinCode') && $('joinCode').focus(), 50);
+        return;
+      }
+      box.innerHTML = '<div class="step">Angemeldet als <b>' + escapeHtml(session.email || '') + '</b>. Wer von euch beiden startet?</div>' +
+        '<button id="mkFam" class="primary choice"><span class="ct">Ich starte</span><span class="cs">Du bekommst einen Einladungs-Link für deinen Partner.</span></button>' +
+        '<button id="haveCode" class="choice"><span class="ct">Ich wurde eingeladen</span><span class="cs">Du hast einen Link oder Code bekommen.</span></button>' +
+        '<div class="hint" id="famHint"></div>' +
+        '<button id="signOut" class="quiet">Abmelden</button>';
       $('mkFam').addEventListener('click', async () => {
-        $('famHint').textContent = 'Lege an…';
-        try { if (!(await ensureSession())) throw new Error('nicht angemeldet'); const j = await rpc('sz_create', { p_name: 'Familie' }); familyCode = j.code; await adoptHousehold(j.id); renderSyncBox(); }
-        catch (e) { $('famHint').textContent = 'Fehlgeschlagen: ' + e.message; }
+        $('famHint').textContent = 'Lege Familie an…';
+        try { if (!(await ensureSession())) throw new Error('nicht angemeldet'); const j = await rpc('sz_create', { p_name: 'Familie' }); familyCode = j.code; memberCount = 1; await adoptHousehold(j.id); renderSyncBox(); }
+        catch (e) { $('famHint').textContent = 'Anlegen fehlgeschlagen: ' + e.message; }
       });
-      $('joinFam').addEventListener('click', async () => {
-        const code = $('joinCode').value.trim().toUpperCase();
-        if (!code) { $('famHint').textContent = 'Bitte den Code eingeben.'; return; }
-        $('famHint').textContent = 'Trete bei…';
-        try { if (!(await ensureSession())) throw new Error('nicht angemeldet'); const j = await rpc('sz_join', { p_code: code }); familyCode = j.code; await adoptHousehold(j.id); renderSyncBox(); }
-        catch (e) { $('famHint').textContent = /unknown code/.test(e.message) ? 'Code unbekannt.' : 'Fehlgeschlagen: ' + e.message; }
-      });
+      $('haveCode').addEventListener('click', () => { famStep = 'join'; renderSyncBox(); });
       $('signOut').addEventListener('click', () => { dropSession(); renderSyncBox(); renderSyncLine(); });
       return;
     }
-    const status = syncState === 'error' ? '⚠ Sync fehlgeschlagen' + (syncMsg ? ' (' + syncMsg + ')' : '') : syncState === 'offline' ? '⏸ Offline' : '✓ Synchron';
-    box.innerHTML = '<div class="hint">' + session.email + ' · ' + status + ' · zuletzt ' + lastOkLabel() + '</div>' +
-      '<div class="hint">Familien-Code für den Partner:</div><div class="code">' + (familyCode || '…') + '</div>' +
-      '<button id="shareCode" class="primary">Code teilen</button>' +
-      '<button id="syncBtn">Jetzt synchronisieren</button>' +
-      '<button id="leaveFam">Dieses Handy von der Familie trennen</button>';
+
+    // 3) in a family: status + invite, sync runs by itself
+    const err = syncState === 'error', off = syncState === 'offline';
+    const who = memberCount == null ? '' : memberCount === 1 ? 'Nur du bist verbunden. Lade deinen Partner ein.' : memberCount + ' Personen verbunden';
+    box.innerHTML = '<div class="famcard' + (err ? ' err' : '') + '"><div class="ft">' + (err ? '⚠ Abgleich hakt' : off ? '⏸ Offline' : '✓ Familie verbunden') + '</div>' +
+        '<div class="fs">' + (who ? who + '<br>' : '') + 'Gleicht sich von selbst ab · zuletzt ' + lastOkLabel() + (err && syncMsg ? '<br>' + escapeHtml(syncMsg) : '') + '</div></div>' +
+      '<button id="shareCode" class="primary">Partner einladen</button>' +
+      '<div class="hint">Oder den Code direkt eingeben lassen: <b>' + (familyCode || '…') + '</b></div>' +
+      '<button id="leaveFam" class="quiet">Dieses Handy von der Familie trennen</button>';
     $('shareCode').addEventListener('click', async () => {
-      const text = 'Stillzeit Familien-Code: ' + familyCode + '\n' + location.origin + location.pathname + '\nApp öffnen, ⋯ → anmelden → "Mit Code beitreten".';
+      if (!familyCode) return;
+      const text = 'Komm in unsere Stillzeit-Familie: ' + inviteUrl() + '\n(Falls gefragt: Code ' + familyCode + ')';
       if (navigator.share) { try { await navigator.share({ text }); } catch (e) {} }
-      else if (navigator.clipboard) { await navigator.clipboard.writeText(text); $('stats').textContent = 'Code kopiert.'; }
+      else if (navigator.clipboard) { await navigator.clipboard.writeText(text); $('stats').textContent = 'Einladung kopiert.'; }
     });
-    $('syncBtn').addEventListener('click', () => { syncNow().then(renderSyncBox); });
     $('leaveFam').addEventListener('click', () => {
-      if (!confirm('Dieses Handy behält seine Einträge, synchronisiert aber nicht mehr. Fortfahren?')) return;
-      db.household_id = null; familyCode = null; localStorage.setItem(DB_KEY, JSON.stringify(db)); dropSession(); renderSyncBox(); renderSyncLine();
+      if (!confirm('Dieses Handy behält seine Einträge, gleicht aber nicht mehr mit der Familie ab. Fortfahren?')) return;
+      db.household_id = null; familyCode = null; memberCount = null; localStorage.setItem(DB_KEY, JSON.stringify(db)); dropSession(); renderSyncBox(); renderSyncLine();
     });
     loadFamilyCode();
+    loadMembers();   // re-count each time, so a partner who just joined shows up
   }
+  // tapping the status line under the title syncs right away and shows it
+  $('syncline').addEventListener('click', async () => {
+    if (!SYNC || !session || !db.household_id) return;
+    $('syncline').textContent = '↻ Gleiche ab…';
+    await syncNow(); renderSyncLine();
+  });
 
   // ---------- menu: export / import ----------
   const sheet = $('sheet');
@@ -879,11 +942,26 @@
     } catch (e) {}
     history.replaceState(null, '', location.pathname);
   }
+  let openMenuOnBoot = false;
+  const hadTokens = !!session && !localStorage.getItem('stillzeit.welcomed.' + session.uid);
+  // invite link: #join=CODE is remembered until this phone is signed in, then used once
+  if (location.hash.startsWith('#join=')) {
+    const code = decodeURIComponent(location.hash.slice(6)).trim().toUpperCase();
+    if (code) { if (db.household_id) $('stats').textContent = 'Dieses Handy ist schon in einer Familie.'; else localStorage.setItem(PENDING_KEY, code); }
+    history.replaceState(null, '', location.pathname);
+    openMenuOnBoot = true;
+  }
+  if (hadTokens && !db.household_id) openMenuOnBoot = true;   // just came back from the mail link: show the next step
+  if (session) localStorage.setItem('stillzeit.welcomed.' + session.uid, '1');
   localStorage.setItem(DB_KEY, JSON.stringify(db));
   syncButton();
   render();
+  if (openMenuOnBoot) setTimeout(() => $('menu').click(), 150);
+  window.addEventListener('hashchange', () => { if (location.hash.startsWith('#join=')) location.reload(); });
   if (SYNC && session) {
+    const pending = localStorage.getItem(PENDING_KEY);
     if (db.household_id) { syncNow(); loadFamilyCode(); }
+    else if (pending) joinWithCode(pending, null);
     else findMyHousehold().then(hid => { if (hid) return adoptHousehold(hid).then(() => { renderSyncBox(); loadFamilyCode(); }); });
   }
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');
