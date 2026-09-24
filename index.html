@@ -138,7 +138,8 @@
   .famcard .ft { font-size: 16px; font-weight: 700; }
   .famcard .fs { font-size: 13px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
   #syncline { cursor: pointer; }
-  .panel button.danger { background: #fdecef; color: #b0304f; font-weight: 600; margin-top: 18px; }
+  .panel button.danger { background: #fdecef; color: #b0304f; font-weight: 600; }
+  .panel button.danger.all { background: #b0304f; color: #fff; margin-top: 6px; }
   .panel button.undo { background: #eef6ef; color: #2d6a3e; font-weight: 600; }
   .code { font-size: 22px; font-weight: 700; letter-spacing: .12em; font-variant-numeric: tabular-nums; padding: 4px 4px 8px; }
 </style>
@@ -147,7 +148,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v12</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v13</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -187,8 +188,11 @@
     <button id="exportJson">Sicherung als JSON speichern</button>
     <button id="exportCsv">Als CSV exportieren</button>
     <button id="importJson">Sicherung wiederherstellen</button>
-    <button id="undoReset" class="undo" hidden>Löschen rückgängig machen</button>
-    <button id="resetAll" class="danger">Alle Einträge löschen</button>
+
+    <div class="sec">Löschen</div>
+    <div class="hint">Vor jedem Löschen wird automatisch eine Sicherung gespeichert. Rückgängig ist danach hier möglich.</div>
+    <div id="undoBox"></div>
+    <div id="resetBox"></div>
     <div class="hint" id="resetHint"></div>
     <button id="closeSheet">Schließen</button>
     <input id="file" type="file" accept="application/json" hidden>
@@ -889,42 +893,61 @@
     sheet.classList.add('open'); history.pushState({ sheet: 1 }, '');
   });
 
-  // ---------- reset: backup first (file + copy inside the app), then tombstone everything, undo possible ----------
-  const RESET_KEY = 'stillzeit.lastReset';
-  const liveEvents = () => db.events.filter(e => !e.deleted);
-  function lastReset() { try { return JSON.parse(localStorage.getItem(RESET_KEY) || 'null'); } catch (e) { return null; } }
+  // ---------- delete per area: backup first (file + copy inside the app), then tombstones, undo per deletion ----------
+  const RESETS_KEY = 'stillzeit.resets';
+  const resets = () => { try { return JSON.parse(localStorage.getItem(RESETS_KEY) || '[]'); } catch (e) { return []; } };
+  const areaEvents = sc => sc ? db.events.filter(e => !e.deleted && e.child_id === db.active_child && sc.types.includes(e.type)) : db.events.filter(e => !e.deleted);
   function renderReset() {
-    const n = liveEvents().length, lr = lastReset();
-    $('resetAll').hidden = n === 0;
-    $('resetAll').textContent = 'Alle ' + n + ' Einträge löschen';
-    $('undoReset').hidden = !lr;
-    if (lr) $('undoReset').textContent = 'Löschen vom ' + new Date(lr.at).toLocaleString('de-DE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' rückgängig machen (' + lr.ids.length + ')';
-    if (!n && !lr) $('resetHint').textContent = '';
+    const box = $('resetBox'); box.innerHTML = '';
+    const areas = SCREENS.filter(x => x.types.length);
+    areas.sort((a, b) => (b === cur()) - (a === cur()));   // the screen you are on comes first
+    for (const sc of areas) {
+      const n = areaEvents(sc).length; if (!n) continue;
+      const b = document.createElement('button'); b.className = 'danger';
+      b.textContent = sc.title + ' löschen (' + n + ')';
+      b.addEventListener('click', () => doReset(sc));
+      box.appendChild(b);
+    }
+    const all = areaEvents(null).length;
+    if (all) { const b = document.createElement('button'); b.className = 'danger all'; b.textContent = 'Alles löschen (' + all + ')'; b.addEventListener('click', () => doReset(null)); box.appendChild(b); }
+    const ub = $('undoBox'); ub.innerHTML = '';
+    for (const r of resets()) {
+      const b = document.createElement('button'); b.className = 'undo';
+      b.textContent = '↩ ' + r.label + ' vom ' + new Date(r.at).toLocaleString('de-DE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + ' zurückholen (' + r.ids.length + ')';
+      b.addEventListener('click', () => undoReset(r.at));
+      ub.appendChild(b);
+    }
   }
-  $('resetAll').addEventListener('click', () => {
-    const live = liveEvents();
-    if (!live.length) return;
+  function doReset(sc) {
+    const live = areaEvents(sc); if (!live.length) return;
+    const label = sc ? sc.title : 'Alles';
     const family = db.household_id ? '\n\nAchtung: Das löscht auch auf dem Handy deines Partners.' : '';
-    if (!confirm('Alle ' + live.length + ' Einträge löschen?\n\nVorher wird eine Sicherung als Datei gespeichert, und du kannst das Löschen im Menü rückgängig machen.' + family)) return;
-    // 1) backup as a file (Downloads) and 2) a copy inside the app
+    if (!confirm((sc ? 'Alle ' + live.length + ' Einträge in "' + sc.title + '" löschen?' : 'Wirklich ALLE ' + live.length + ' Einträge löschen?') +
+      '\n\nVorher wird eine Sicherung als Datei gespeichert, und du kannst es im Menü rückgängig machen.' + family)) return;
     const at = Date.now();
-    download('stillzeit-sicherung-vor-loeschen-' + stamp() + '.json', JSON.stringify(db, null, 2), 'application/json');
+    // 1) backup of everything as a file (Downloads)
+    download('stillzeit-sicherung-vor-loeschen-' + (sc ? sc.key + '-' : '') + stamp() + '.json', JSON.stringify(db, null, 2), 'application/json');
+    // 2) backup copy inside the app, the newest three are kept
     try { localStorage.setItem('stillzeit.backup.' + at, JSON.stringify(db)); } catch (e) {}
-    for (const k of Object.keys(localStorage)) if (k.startsWith('stillzeit.backup.') && k !== 'stillzeit.backup.' + at) localStorage.removeItem(k);   // keep only the newest copy
-    localStorage.setItem(RESET_KEY, JSON.stringify({ at, ids: live.map(e => e.id) }));
-    // 3) delete as tombstones, so the deletion syncs and can be undone
+    const keys = Object.keys(localStorage).filter(k => k.startsWith('stillzeit.backup.')).sort();
+    while (keys.length > 3) localStorage.removeItem(keys.shift());
+    // 3) remember for undo (newest five), then delete as tombstones so it syncs and can come back
+    const list = [{ at, label, ids: live.map(e => e.id) }].concat(resets()).slice(0, 5);
+    localStorage.setItem(RESETS_KEY, JSON.stringify(list));
     for (const e of live) e.deleted = true;
     armed = null; save(); syncButton(); render(); renderReset();
-    $('resetHint').textContent = 'Gelöscht. Sicherung liegt in deinen Downloads.';
-  });
-  $('undoReset').addEventListener('click', () => {
-    const lr = lastReset(); if (!lr) return;
-    const ids = new Set(lr.ids); let n = 0;
+    $('resetHint').textContent = label + ' gelöscht. Sicherung liegt in deinen Downloads.';
+  }
+  function undoReset(at) {
+    const list = resets(), r = list.find(x => x.at === at); if (!r) return;
+    const ids = new Set(r.ids); let n = 0;
     for (const e of db.events) if (ids.has(e.id) && e.deleted) { delete e.deleted; n++; }
-    localStorage.removeItem(RESET_KEY);
+    localStorage.setItem(RESETS_KEY, JSON.stringify(list.filter(x => x.at !== at)));
     save(); syncButton(); render(); renderReset();
-    $('resetHint').textContent = n + ' Einträge sind wieder da.';
-  });
+    $('resetHint').textContent = n + ' Einträge in "' + r.label + '" sind wieder da.';
+  }
+  // v12 kept a single undo under another key: carry it over once
+  try { const old = JSON.parse(localStorage.getItem('stillzeit.lastReset') || 'null'); if (old) { localStorage.setItem(RESETS_KEY, JSON.stringify([{ at: old.at, label: 'Alles', ids: old.ids }].concat(resets()).slice(0, 5))); localStorage.removeItem('stillzeit.lastReset'); } } catch (e) {}
   $('minSec').addEventListener('input', () => {
     db.settings.minSeconds = Math.max(0, Math.floor(Number($('minSec').value) || 0));
     localStorage.setItem(DB_KEY, JSON.stringify(db)); syncButton(); render();

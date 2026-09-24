@@ -45,12 +45,14 @@ Alles landet im selben Event-Log, wird gleich gesynct und gleich exportiert.
   eine andere App oder sperrt manuell, gibt das System die Sperre frei.
 - Zeile antippen → "Löschen"; Löschen ist ein Tombstone (deleted: true), nie ein echtes Entfernen.
 - Menü (⋯ oben rechts): Sicherung als JSON, Export als CSV, Sicherung wiederherstellen.
-- **Alle Einträge löschen (seit v12)**: roter Button ganz unten im Menü, zeigt die Anzahl. Nach
-  der Rückfrage (in einer Familie mit Hinweis, dass es auch beim Partner löscht) passiert immer
-  in dieser Reihenfolge: JSON-Sicherung als Datei in die Downloads, eine Kopie in der App
-  (`stillzeit.backup.<zeit>`, nur die neueste), dann alle Einträge als Tombstones löschen.
-  Danach erscheint "Löschen rückgängig machen", das genau diese Einträge zurückholt (auch beim
-  Partner, weil es über denselben Sync läuft).
+- **Löschen pro Bereich (seit v13)**: Menü → "Löschen" hat einen roten Button pro Bereich mit
+  Anzahl ("Stillen löschen (23)", "Gewicht löschen (4)", ...), der Bereich, in dem man gerade ist,
+  steht oben; darunter dunkelrot "Alles löschen". Nach der Rückfrage (in einer Familie mit
+  Hinweis, dass es auch beim Partner löscht) immer diese Reihenfolge: komplette JSON-Sicherung
+  als Datei in die Downloads, Kopie in der App (die neuesten drei), dann die Einträge des
+  Bereichs als Tombstones. Jedes Löschen bekommt einen grünen "↩ ... zurückholen"-Button (die
+  letzten fünf), der genau diese Einträge zurückholt, auch beim Partner.
+  Bereichs-Löschen betrifft das aktive Kind; "Alles" betrifft alle Einträge.
 - Sprache Deutsch, weil die Nutzer Deutsch sprechen.
 
 ## Datenmodell (Schema 2, seit v2)
@@ -145,6 +147,7 @@ db = {
 - v10 (2026-09-22): Navigation im Kreis; Übersichts-Screen mit Diagrammen.
 - v11 (2026-09-24): Familie einrichten als geführter Weg, Einladungs-Link, Personenzahl, kein Sync-Knopf.
 - v12 (2026-09-24): Alle Einträge löschen mit automatischer Sicherung und Rückgängig.
+- v13 (2026-09-24): Löschen pro Bereich, Rückgängig pro Löschvorgang.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.
