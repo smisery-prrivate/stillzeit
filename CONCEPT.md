@@ -5,12 +5,23 @@ ist sie so gebaut, dass mehr Tracker, mehrere Kinder, eine Familie mit mehreren 
 Exporte nach Excel, Notion oder Drive dazukommen können, ohne das Datenmodell zu brechen.
 
 ## Screens (seit v8)
-Die App ist ein senkrechter Stapel von sechs Screens (im Kreis: nach dem letzten kommt wieder der erste), alle mit derselben Form (Statuszeile, Liste
+Die App ist ein senkrechter Stapel von sieben Screens (im Kreis: nach dem letzten kommt wieder der erste), alle mit derselben Form (Statuszeile, Liste
 nach Tagen, große Buttons unten). Wechsel über zwei Balken ▲/▼ oben und unten (56 px hoch, mit
 dem Namen des Nachbar-Screens) oder Wischen nach oben/unten **im Button-Bereich oder auf den
 Balken**. Über der Liste wird nicht gewischt, dort wird nur gescrollt (v8 versuchte "am Listenende
 wischen", das fühlte sich unzuverlässig an). Der zuletzt offene Screen wird gemerkt.
 
+0. **Geburt** (type `birth`, `note` = Bezeichnung; seit v14): Ereignisse vor und während der
+   Geburt mit Zeitpunkt. Ein einziger Button "Ereignis festhalten" (keine fest verdrahteten
+   Kategorien auf dem Screen, Pat: Schleimpfropf und Fruchtwasser waren nur Beispiele). Er öffnet
+   ein Blatt mit Vorschlägen (Schleimpfropf gelöst, Fruchtwasser abgegangen, Wehen beginnen,
+   Blutung, Hebamme angerufen, Losgefahren, In der Klinik, PDA, Presswehen, Geburt), einem
+   Freitextfeld und dem Zeitpunkt. Tipp auf einen Vorschlag speichert sofort.
+   **Eigene Kategorien entstehen von selbst**: was einmal frei eingetippt wurde, erscheint
+   beim nächsten Mal als eigener Vorschlag ganz vorne (violett, häufigste zuerst). Kein
+   Wehen-Timer, dafür gibt es eine eigene App. Steht im Stapel über Stillen; Startscreen bleibt
+   Stillen. In der Übersicht erscheint eine Zeitleiste, sobald etwas eingetragen ist.
+   Der Screen gibt keine medizinischen Hinweise, er hält nur fest.
 1. **Stillen** (type `feed`, unten beschrieben)
 2. **Windel**: zwei Buttons Urin (`pee`) und Stuhl (`poo`), ein Tipp = ein Eintrag mit Uhrzeit.
    Tageskopf "5 mal · 3 Urin · 2 Stuhl", Farbe nach Anzahl (Bernstein).
@@ -23,6 +34,10 @@ wischen", das fühlte sich unzuverlässig an). Der zuletzt offene Screen wird ge
    dem Balken), Windel = Urin/Stuhl gestapelt pro Tag, Gewicht und Größe = Linie über die Zeit,
    Medizin = Fieberkurve mit 38-Grad-Linie und Husten pro Tag. Alles inline-SVG, eine Achse pro
    Grafik, keine Bibliothek, offline.
+
+**Zeit korrigieren (seit v14)**: bei allen Einträgen außer Stillen zeigt der Tipp auf die Zeile
+neben "Löschen" auch "Zeit". Damit lässt sich der Zeitpunkt nachträglich setzen, wenn man erst
+später zum Eintragen kommt.
 
 Alles landet im selben Event-Log, wird gleich gesynct und gleich exportiert.
 
@@ -148,6 +163,7 @@ db = {
 - v11 (2026-09-24): Familie einrichten als geführter Weg, Einladungs-Link, Personenzahl, kein Sync-Knopf.
 - v12 (2026-09-24): Alle Einträge löschen mit automatischer Sicherung und Rückgängig.
 - v13 (2026-09-24): Löschen pro Bereich, Rückgängig pro Löschvorgang.
+- v14 (2026-10-08): Screen Geburt mit einem Button, Vorschlägen, eigenen Kategorien, Zeitleiste; Zeit korrigieren.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.

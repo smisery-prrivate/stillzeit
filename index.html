@@ -39,6 +39,10 @@
   .row .s.none { visibility: hidden; }
   .row .del { display: none; margin-left: 12px; height: 44px; padding: 0 14px; border: none; border-radius: 10px; background: #fde8ee; color: var(--accent-dark); font-size: 14px; font-weight: 600; }
   .row.armed .del { display: inline-block; }
+  .row .edit { display: none; margin-left: 12px; height: 44px; padding: 0 14px; border: none; border-radius: 10px; background: #f1ece9; color: var(--ink); font-size: 14px; font-weight: 600; }
+  .row.armed .edit { display: inline-block; }
+  .row.armed .edit + .del { margin-left: 6px; }
+  .row .s.birth { background: #ece6f5; color: #5e4690; }
   .row.armed { border-color: var(--accent); }
   .empty { color: var(--muted); font-size: 15px; text-align: center; padding: 36px 12px; line-height: 1.5; }
 
@@ -82,6 +86,23 @@
   .tap .lbl { font-size: 13px; font-weight: 600; opacity: .9; }
   #taps.n3 .tap { width: 106px; height: 106px; }
   #taps.n3 .tap .big { font-size: 19px; }
+  .tap.plug { background: #7d5fb2; }
+  #cancel.gone { display: none; }
+  #entryChips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  #entryChips:empty { display: none; }
+  #entryChips button { display: inline-block; width: auto; margin: 0; height: 44px; padding: 0 14px; border: 1px solid var(--line); border-radius: 22px; background: var(--bg); color: var(--ink); font-size: 15px; text-align: center; }
+  #entry .panel { max-height: 90vh; overflow-y: auto; }
+  #entry .unit:empty { display: none; }
+  #entryChips button.own { background: #ece6f5; border-color: #ddd2ee; }
+  #entry .timerow { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  #entry .timerow[hidden], #entry .valrow[hidden] { display: none; }
+  #entry .timerow label { font-size: 14px; color: var(--muted); }
+  #entry .timerow input { font-size: 17px; height: 48px; }
+  .tl { list-style: none; margin: 4px 0 0; padding: 0 0 0 14px; border-left: 2px solid #ddd2ee; }
+  .tl li { position: relative; padding: 0 0 12px 10px; font-size: 14px; line-height: 1.35; }
+  .tl li::before { content: ''; position: absolute; left: -20px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: #7d5fb2; border: 2px solid #fff; }
+  .tl .tt { color: var(--muted); font-size: 12px; }
+  .tl .gap { color: var(--muted); font-size: 12px; }
   .tap.pee { background: #d9a441; } .tap.poo { background: #8a6a4a; }
   .tap.measure { background: #2a9d8f; }
   .tap.fever { background: #d9534f; } .tap.cough { background: #5c7f9e; } .tap.note { background: #7a7580; }
@@ -122,6 +143,7 @@
   #sheet.open { display: flex; }
   #sheet .panel { width: 100%; max-width: 480px; max-height: 88vh; overflow-y: auto; background: var(--card); border-radius: 20px 20px 0 0; padding: 16px 16px calc(env(safe-area-inset-bottom) + 20px); }
   .panel button { display: block; width: 100%; height: 52px; border: none; border-radius: 12px; background: var(--bg); color: var(--ink); font-size: 16px; margin-bottom: 8px; text-align: left; padding: 0 16px; }
+  .panel button[hidden] { display: none; }
   .panel button.primary { background: var(--accent); color: #fff; font-weight: 600; }
   .panel .hint { font-size: 12px; color: var(--muted); padding: 4px 4px 10px; line-height: 1.4; }
   .panel .sec { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 14px 4px 8px; }
@@ -148,7 +170,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v13</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v14</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -169,13 +191,17 @@
 <div id="entry">
   <div class="panel">
     <h2 id="entryTitle"></h2>
-    <div class="valrow"><input id="entryVal"><span class="unit" id="entryUnit"></span></div>
+    <div id="entryChips"></div>
+    <div class="valrow" id="entryValRow"><input id="entryVal"><span class="unit" id="entryUnit"></span></div>
+    <div class="timerow" id="entryTimeRow" hidden><label for="entryTime">Zeitpunkt</label><input id="entryTime" type="datetime-local"></div>
     <div class="btns"><button id="entryCancel">Abbrechen</button><button id="entrySave" class="primary">Speichern</button></div>
   </div>
 </div>
 <div id="sheet">
   <div class="panel">
     <div class="hint" id="stats"></div>
+
+    <button id="installBtn" class="primary" hidden>Als App auf den Startbildschirm</button>
 
     <div class="sec">Familie &amp; Sync</div>
     <div id="syncBox"></div>
@@ -326,6 +352,8 @@
 
   // ---------- screens ----------
   const SCREENS = [
+    { key: 'birth', title: 'Geburt', types: ['birth'], empty: 'Noch nichts festgehalten.<br>Unten antippen, wenn etwas passiert. Die Uhrzeit wird gespeichert und lässt sich später korrigieren.',
+      buttons: [{ t: 'birth', label: 'Ereignis', sub: 'festhalten', cls: 'plug', input: { text: true, time: true, chips: true, placeholder: 'Oder eigenes eintippen' } }] },
     { key: 'feed', title: 'Stillen', types: ['feed'], empty: 'Noch kein Eintrag.<br>Unten tippen, wenn das Stillen beginnt.' },
     { key: 'diaper', title: 'Windel', types: ['pee', 'poo'], empty: 'Noch keine Windel.<br>Unten tippen: Urin oder Stuhl.',
       buttons: [{ t: 'pee', label: 'Urin', cls: 'pee' }, { t: 'poo', label: 'Stuhl', cls: 'poo' }] },
@@ -339,7 +367,16 @@
   ];
   const TYPE_LABEL = { pee: 'Urin', poo: 'Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', feed: 'Stillen' };
   const TYPE_BADGE = { pee: 'U', poo: 'S', weight: 'kg', height: 'cm', fever: '°', cough: 'H', med: '✎' };
-  let screen = Math.max(0, SCREENS.findIndex(x => x.key === localStorage.getItem('stillzeit.screen')));
+  let screen = SCREENS.findIndex(x => x.key === localStorage.getItem('stillzeit.screen'));
+  if (screen < 0) screen = SCREENS.findIndex(x => x.key === 'feed');
+  const BIRTH_PRESETS = ['Schleimpfropf gelöst', 'Fruchtwasser abgegangen', 'Wehen beginnen', 'Wehen regelmäßig', 'Blutung', 'Hebamme angerufen', 'Losgefahren', 'In der Klinik', 'PDA', 'Presswehen', 'Geburt'];
+  // own categories: whatever was typed before comes back as a suggestion, most used first
+  function ownBirthLabels() {
+    const cnt = new Map();
+    for (const e of db.events) if (e.type === 'birth' && !e.deleted && e.note && !BIRTH_PRESETS.includes(e.note)) cnt.set(e.note, (cnt.get(e.note) || 0) + 1);
+    return [...cnt.entries()].sort((a, b) => b[1] - a[1]).map(x => x[0]).slice(0, 8);
+  }
+  const toLocalInput = ts => { const d = new Date(ts); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
   const cur = () => SCREENS[screen];
   const fmtNum = (v, d) => Number(v).toLocaleString('de-DE', { minimumFractionDigits: 0, maximumFractionDigits: d });
   const valueLabel = e => e.type === 'weight' ? fmtNum(e.value, 3) + ' kg' : e.type === 'height' ? fmtNum(e.value, 1) + ' cm' : e.type === 'fever' ? fmtNum(e.value, 1) + ' °C' : '';
@@ -403,6 +440,8 @@
           inner = '<span class="s ' + (it.side || 'none') + '">' + (it.side || '') + '</span><span class="t">' + hhmm(it.start) + ' – ' + hhmm(it.end) + '</span><span class="d">' + durLabel(it.end - it.start) + '</span>';
         } else if (it.type === 'pee' || it.type === 'poo' || it.type === 'cough') {
           inner = '<span class="s ' + it.type + '">' + TYPE_BADGE[it.type] + '</span><span class="t">' + hhmm(it.start) + '</span><span class="d">' + TYPE_LABEL[it.type] + '</span>';
+        } else if (it.type === 'birth') {
+          inner = '<span class="s birth">●</span><span class="t" style="flex:none;margin-right:12px">' + hhmm(it.start) + '</span><span class="note">' + escapeHtml(it.note || '') + '</span>';
         } else if (it.type === 'med') {
           inner = '<span class="s note">' + TYPE_BADGE.med + '</span><span class="t">' + hhmm(it.start) + '</span><span class="note">' + escapeHtml(it.note || '') + '</span>';
         } else {   // weight, height, fever: value with delta to the previous measurement
@@ -411,9 +450,10 @@
           if (prev && it.type !== 'fever') { const d = it.value - prev.value; delta = '<span class="sub">' + (d >= 0 ? '+' : '−') + (it.type === 'weight' ? fmtNum(Math.abs(d) * 1000, 0) + ' g' : fmtNum(Math.abs(d), 1) + ' cm') + '</span>'; }
           inner = '<span class="s ' + (it.type === 'fever' ? 'fever' : 'measure') + '">' + TYPE_BADGE[it.type] + '</span><span class="t">' + hhmm(it.start) + delta + '</span><span class="d">' + valueLabel(it) + '</span>';
         }
-        el.innerHTML = inner + '<button class="del">Löschen</button>';
+        el.innerHTML = inner + (it.type !== 'feed' ? '<button class="edit">Zeit</button>' : '') + '<button class="del">Löschen</button>';
         el.addEventListener('click', e => {
           if (e.target.classList.contains('del')) { it.deleted = true; armed = null; save(); render(); return; }
+          if (e.target.classList.contains('edit')) { openEntry({ label: 'Zeitpunkt ändern', edit: it, input: { timeOnly: true, time: true } }); return; }
           armed = armed === it.id ? null : it.id; render();
         });
         wrap.appendChild(el);
@@ -440,8 +480,8 @@
     if (sc.key === 'dash') { el.innerHTML = running + 'Antippen zeigt die Grafik.'; return; }
     const last = ofScreen(sc)[0];
     if (!last) { el.innerHTML = running; return; }
-    const what = sc.key === 'diaper' ? 'Letzte Windel' : sc.key === 'med' ? 'Letzter Eintrag' : 'Zuletzt';
-    const detail = sc.key === 'diaper' || sc.key === 'med' ? (last.type === 'med' ? '' : ' · ' + TYPE_LABEL[last.type]) : ' · ' + valueLabel(last);
+    const what = sc.key === 'diaper' ? 'Letzte Windel' : sc.key === 'med' ? 'Letzter Eintrag' : sc.key === 'birth' ? 'Letztes Ereignis' : 'Zuletzt';
+    const detail = sc.key === 'birth' ? ' · ' + escapeHtml(last.note || '') : sc.key === 'diaper' || sc.key === 'med' ? (last.type === 'med' ? '' : ' · ' + TYPE_LABEL[last.type]) : ' · ' + valueLabel(last);
     el.innerHTML = running + what + ' <b>' + ago(Date.now() - last.start) + '</b>' + detail;
   }
 
@@ -451,19 +491,19 @@
     const sc = cur(), run = runningFeed();
     if (tick) { clearInterval(tick); tick = null; }
     if (sc.key !== 'feed') {
-      big.hidden = true; starts.hidden = true; cancel.classList.remove('show');
+      big.hidden = true; starts.hidden = true; cancel.classList.remove('show'); cancel.classList.add('gone');
       if (!sc.buttons.length) { taps.hidden = true; renderSince(); return; }
       taps.hidden = false; taps.className = 'n' + sc.buttons.length; taps.innerHTML = '';
       for (const b of sc.buttons) {
         const el = document.createElement('button'); el.className = 'tap ' + b.cls;
         el.innerHTML = '<span class="big">' + b.label + '</span><span class="lbl">' + (b.sub || 'antippen') + '</span>';
-        el.addEventListener('click', () => b.input ? openEntry(b) : (addEvent({ type: b.t, start: Date.now() }), render()));
+        el.addEventListener('click', () => b.input ? openEntry(b) : (addEvent(Object.assign({ type: b.t, start: Date.now() }, b.note ? { note: b.note } : {})), render()));
         taps.appendChild(el);
       }
       renderSince();
       return;
     }
-    taps.hidden = true;
+    taps.hidden = true; cancel.classList.remove('gone');
     big.hidden = !run; starts.hidden = !!run;
     big.classList.remove('L', 'R'); if (run && run.side) big.classList.add(run.side);
     cancel.classList.toggle('show', !!run);
@@ -586,6 +626,16 @@
       if (cough.length) chart += '<div style="height:10px"></div>' + svgBars(days, days.map(d => [{ v: m.get(d.key).length, color: C.cough }]), { labels: st => st[0].v }) + '<div class="cap">Husten pro Tag, letzte 14 Tage.</div>';
       cards.push({ key: 'med', title: 'Medizin', sum, chart: chart || '<div class="cap">Noch keine Daten.</div>' });
     }
+    // Geburt: a timeline, shown once something was logged
+    {
+      const evs = alive().filter(e => e.type === 'birth').sort((a, b) => a.start - b.start);
+      if (evs.length) {
+        const last = evs[evs.length - 1];
+        const dt = t => new Date(t).toLocaleString('de-DE', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+        const items = evs.map((e, i) => '<li><div class="tt">' + dt(e.start) + (i ? ' <span class="gap">· ' + durLabel(e.start - evs[i - 1].start) + ' später</span>' : '') + '</div>' + escapeHtml(e.note || '') + '</li>').join('');
+        cards.unshift({ key: 'birth', title: 'Geburt', sum: evs.length + ' Ereignisse · zuletzt ' + escapeHtml(last.note || '') + ' ' + ago(Date.now() - last.start), chart: '<ul class="tl">' + items + '</ul>' });
+      }
+    }
     return cards;
   }
   function renderDash(list) {
@@ -601,13 +651,26 @@
   const entry = $('entry'); let entryBtn = null;
   function openEntry(b) {
     entryBtn = b;
-    $('entryTitle').textContent = b.label + (b.input.text ? '' : ' in ' + b.input.unit);
-    const inp = $('entryVal');
-    inp.value = ''; inp.placeholder = b.input.placeholder;
-    inp.type = 'text'; inp.inputMode = b.input.text ? 'text' : 'decimal';
-    $('entryUnit').textContent = b.input.text ? '' : b.input.unit;
+    const inp = $('entryVal'), I = b.input;
+    $('entryTitle').textContent = I.chips ? 'Was ist passiert?' : b.label + (I.text || I.timeOnly ? '' : ' in ' + I.unit);
+    $('entryValRow').hidden = !!I.timeOnly;
+    inp.value = ''; inp.placeholder = I.placeholder || '';
+    inp.type = 'text'; inp.inputMode = I.text ? 'text' : 'decimal';
+    $('entryUnit').textContent = I.text || I.timeOnly ? '' : I.unit;
+    $('entryTimeRow').hidden = !I.time;
+    $('entryTime').value = toLocalInput(b.edit ? b.edit.start : Date.now());
+    $('entryTime').max = toLocalInput(Date.now() + 60000);
+    const chips = $('entryChips'); chips.innerHTML = '';
+    if (I.chips) {
+      const own = ownBirthLabels();
+      for (const label of own.concat(BIRTH_PRESETS)) {
+        const c = document.createElement('button'); c.textContent = label; if (own.includes(label)) c.className = 'own';
+        c.addEventListener('click', () => { inp.value = label; saveEntry(); });
+        chips.appendChild(c);
+      }
+    }
     entry.classList.add('open'); history.pushState({ entry: 1 }, '');
-    setTimeout(() => inp.focus(), 50);
+    if (!I.timeOnly && !I.chips) setTimeout(() => inp.focus(), 50);
   }
   function closeEntry() { entry.classList.remove('open'); $('entryVal').blur(); }
   $('entryCancel').addEventListener('pointerdown', e => { e.preventDefault(); history.back(); });
@@ -616,10 +679,13 @@
   entry.addEventListener('click', e => { if (e.target === entry) history.back(); });
   function saveEntry() {
     const b = entryBtn; if (!b) return;
-    const raw = $('entryVal').value.trim();
-    if (b.input.text) { if (!raw) return; addEvent({ type: b.t, start: Date.now(), note: raw }); }
-    else { const v = Number(raw.replace(',', '.')); if (!raw || !isFinite(v) || v <= 0) return; addEvent({ type: b.t, start: Date.now(), value: v, unit: b.input.unit === '°C' ? 'C' : b.input.unit }); }
-    history.back(); render();
+    const I = b.input, raw = $('entryVal').value.trim();
+    let when = Date.now();
+    if (I.time) { const t = new Date($('entryTime').value).getTime(); if (isFinite(t)) when = Math.min(t, Date.now()); }
+    if (I.timeOnly) { b.edit.start = when; save(); }
+    else if (I.text) { if (!raw) return; addEvent({ type: b.t, start: when, note: raw }); }
+    else { const v = Number(raw.replace(',', '.')); if (!raw || !isFinite(v) || v <= 0) return; addEvent({ type: b.t, start: when, value: v, unit: I.unit === '°C' ? 'C' : I.unit }); }
+    armed = null; history.back(); render();
   }
   window.addEventListener('popstate', closeEntry);
 
@@ -996,6 +1062,12 @@
   }
   document.addEventListener('visibilitychange', () => { if (!document.hidden) keepAwake(); });
   keepAwake();
+
+  // ---------- install as an app (Android Chrome/Brave offer this once the page qualifies) ----------
+  let installEvt = null;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installEvt = e; $('installBtn').hidden = false; });
+  window.addEventListener('appinstalled', () => { installEvt = null; $('installBtn').hidden = true; });
+  $('installBtn').addEventListener('click', async () => { if (!installEvt) return; installEvt.prompt(); try { await installEvt.userChoice; } catch (e) {} installEvt = null; $('installBtn').hidden = true; });
 
   // ---------- boot ----------
   load();
