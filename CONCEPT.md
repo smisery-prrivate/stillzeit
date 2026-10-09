@@ -181,6 +181,9 @@ db = {
 - v16 (2026-10-09): Sicherheit: `side` nur noch L oder R (Anzeige, Sync, Import, gespeicherte Daten), Servertexte
   und Familien-Code werden maskiert, Content-Security-Policy mit Skript-Fingerabdruck, kaputter Einladungs-Link
   stoppt die App nicht mehr. Datenbank-Regel in `supabase-fix-2.sql`.
+- v17 (2026-10-09): CSV-Export: Textzellen, die wie eine Formel beginnen (`=`, `+`, `-`, `@`), bekommen ein
+  Hochkomma vorangestellt, damit Excel sie als Text liest und nicht ausführt. Zahlen bleiben Zahlen. Die Datei
+  beginnt mit der UTF-8-Kennung, damit Excel Umlaute richtig zeigt.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.

@@ -7,7 +7,7 @@
          node tools/csp-hash.js
      otherwise the browser refuses the script and the app stays blank (tools/hooks/pre-commit checks this).
      connect-src names the Supabase project from config.js; both change together. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ntHzDj0Tjv1SeW9l2eBvSUkz87mV2/l+s1S6o8rWwnI='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-xL6TUq4tXb0gTAeVzfPMnw1jBrZhBAvj18PRiEX7868='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e0607e">
 <link rel="manifest" href="manifest.json">
@@ -176,7 +176,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v16</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v17</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -1041,7 +1041,9 @@
       const child = (db.children.find(c => c.id === e.child_id) || {}).name || '';
       rows.push([e.type, child, iso(e.start), e.end ? iso(e.end) : '', e.end ? mins(e.end - e.start) : '', e.side ?? '', e.value ?? '', e.unit ?? '', e.note ?? '']);
     }
-    download('stillzeit-' + stamp() + '.csv', rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\n'), 'text/csv');
+    // a text cell that starts like a formula would be run by Excel when the file is opened: a leading apostrophe keeps it text
+    const cell = v => '"' + (typeof v === 'string' && /^[=+\-@\t\r]/.test(v) ? "'" + v : String(v)).replace(/"/g, '""') + '"';
+    download('stillzeit-' + stamp() + '.csv', '\uFEFF' + rows.map(r => r.map(cell).join(';')).join('\n'), 'text/csv');   // the mark at the start makes Excel read umlauts correctly
   });
   $('importJson').addEventListener('click', () => $('file').click());
   $('file').addEventListener('change', async e => {
