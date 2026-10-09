@@ -154,11 +154,17 @@ db = {
 - Die Datenbank prüft `side` zusätzlich selbst (`sz_events_side_chk`, siehe `supabase-fix-2.sql`).
 - **Content-Security-Policy** im Kopf von `index.html`: es läuft nur das eigene Skript. Die Seite trägt dafür
   den Fingerabdruck (sha256) ihres Skript-Blocks. Stimmt er nicht, startet die App nicht.
+- **Anmelde-Link (seit v18, `adoptLink`):** Ein Link mit Tokens gilt als fremd, bis er sich ausweist. Der Server
+  muss das Token bestätigen (`/auth/v1/user`), die Adresse kommt aus dieser Antwort. Ohne Rückfrage wird der Link
+  nur übernommen, wenn dieses Handy in der letzten Stunde selbst einen Link für genau diese Adresse angefordert
+  hat (`stillzeit.linkAsked`, geschrieben beim Tippen auf "Anmelde-Link per Mail schicken") und kein anderes
+  Konto angemeldet ist. Sonst fragt die App und nennt die Adresse. Ein angemeldetes anderes Konto wird nie ohne
+  diese Bestätigung ersetzt. Gleiches Muster wie Snapdoc (`snapdoc.linkAsked`) und Brain Relieve.
 - **Release-Schritte:** Versions-Label in `index.html`, `CACHE` in `sw.js`, Zeile hier unter Versionen, und nach
   jeder Änderung am Skript `node tools/csp-hash.js`. Der Commit-Check `tools/hooks/pre-commit` lehnt einen
   veralteten Fingerabdruck ab (einmal pro Kopie des Repos einschalten: `git config core.hooksPath tools/hooks`).
 - Tests liegen in `_preview/tests` (nicht im Repo): `t1-inject.js` prüft die Einschleusung, `t2-smoke.js` alle
-  Screens, Sync und die Policy.
+  Screens, Sync und die Policy, `t3-signin-link.js` die Anmelde-Links.
 
 ## Versionen
 - v1 (2026-09-21): Stoppuhr, Einträge, Tagesgruppen mit Farbe, "vor x min", Löschen.
@@ -184,6 +190,10 @@ db = {
 - v17 (2026-10-09): CSV-Export: Textzellen, die wie eine Formel beginnen (`=`, `+`, `-`, `@`), bekommen ein
   Hochkomma vorangestellt, damit Excel sie als Text liest und nicht ausführt. Zahlen bleiben Zahlen. Die Datei
   beginnt mit der UTF-8-Kennung, damit Excel Umlaute richtig zeigt.
+- v18 (2026-10-09): Sicherheit: Ein Anmelde-Link wird nur noch ohne Rückfrage übernommen, wenn dieses Handy ihn in
+  der letzten Stunde für genau diese Adresse angefordert hat. Sonst fragt die App und nennt die Adresse. Der Server
+  muss jedes Token bestätigen. Vorher konnte ein zugeschickter Link ein Handy in ein fremdes Konto anmelden und
+  dessen Einträge in die fremde Familie hochladen.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.

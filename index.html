@@ -7,7 +7,7 @@
          node tools/csp-hash.js
      otherwise the browser refuses the script and the app stays blank (tools/hooks/pre-commit checks this).
      connect-src names the Supabase project from config.js; both change together. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-xL6TUq4tXb0gTAeVzfPMnw1jBrZhBAvj18PRiEX7868='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-+34d9tYqEZVN7OT+TaxOY2pQPAqifFIjwegrVWrSEqc='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e0607e">
 <link rel="manifest" href="manifest.json">
@@ -176,7 +176,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v17</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v18</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -705,12 +705,52 @@
   try { session = JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (e) { session = null; }
   let syncTimer = null, syncing = false, syncState = '', syncMsg = '';
   const jwtPayload = t => JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-  function adoptSession(d) {
+  function adoptSession(d, u) {
     const p = jwtPayload(d.access_token);
-    session = { access_token: d.access_token, refresh_token: d.refresh_token, expires_at: p.exp, email: p.email, uid: p.sub };
+    session = { access_token: d.access_token, refresh_token: d.refresh_token, expires_at: p.exp, email: (u && u.email) || p.email, uid: p.sub };
     localStorage.setItem(SESSION_KEY, JSON.stringify(session));
   }
   function dropSession() { session = null; localStorage.removeItem(SESSION_KEY); }
+  // Tokens from a sign-in link. Anyone can send a link that carries their own session; opened here it would sign
+  // this phone into their account and move its entries into their family. So: the server has to confirm the token,
+  // and it is taken without a question only when this phone asked for a link for that very address within the last
+  // hour and no other account is signed in. In every other case the app asks first and names the address.
+  // Returns '' or the reason the link was not used.
+  const LINK_KEY = 'stillzeit.linkAsked';   // { at, email } written when the send button was tapped
+  const LINK_BAD = 'Der Anmelde-Link konnte nicht bestätigt werden und wurde nicht verwendet.';
+  async function adoptLink(t) {
+    if (!SYNC) return '';
+    let u, p;
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 15000);
+    try {
+      p = jwtPayload(t.access_token);
+      const r = await fetch(SYNC.url + '/auth/v1/user', { headers: { apikey: SYNC.key, Authorization: 'Bearer ' + t.access_token }, signal: ctl.signal });
+      if (!r.ok) return LINK_BAD;
+      u = await r.json();
+    } catch (e) { return LINK_BAD; }
+    finally { clearTimeout(timer); }
+    if (!u || !u.id || !u.email || u.id !== p.sub) return LINK_BAD;
+    const mail = String(u.email);
+    let asked = null;
+    try { asked = JSON.parse(localStorage.getItem(LINK_KEY) || 'null'); } catch (e) { asked = null; }
+    const age = asked ? Date.now() - asked.at : -1;
+    const mine = !!asked && age >= 0 && age < 3600000 && asked.email === mail.toLowerCase();
+    if (mine) localStorage.removeItem(LINK_KEY);   // one link per request
+    const same = !!session && session.uid === u.id;   // already signed in with this account: nothing changes hands
+    if (!same && (session || !mine)) {
+      const then = db.household_id
+        ? 'Der Abgleich mit der Familie läuft dann über dieses Konto und klappt nur, wenn es dort Mitglied ist.'
+        : 'Die Einträge dieses Handys werden dann mit diesem Konto und seiner Familie geteilt.';
+      const q = session
+        ? 'Dieses Handy ist angemeldet als:\n' + (session.email || 'unbekannt') + '\n\nDer geöffnete Anmelde-Link würde es stattdessen anmelden als:\n' + mail +
+          '\n\nNur bestätigen, wenn du das Konto wechseln willst. ' + then
+        : 'Dieser Anmelde-Link wurde nicht in der letzten Stunde von diesem Handy angefordert.\n\nEr meldet dieses Handy an als:\n' + mail +
+          '\n\nNur bestätigen, wenn das deine eigene Adresse ist. ' + then;
+      if (!confirm(q)) return '';
+    }
+    adoptSession(t, u);
+    return '';
+  }
   async function ensureSession() {
     if (!SYNC || !session) return false;
     if (Date.now() / 1000 < session.expires_at - 60) return true;
@@ -809,7 +849,7 @@
       method: 'POST', headers: { apikey: SYNC.key, 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, create_user: true })
     });
-    if (r.ok) return { ok: true };
+    if (r.ok) { try { localStorage.setItem(LINK_KEY, JSON.stringify({ at: Date.now(), email: email.toLowerCase() })); } catch (e) {} return { ok: true }; }
     let msg = 'Senden fehlgeschlagen. Später nochmal.';
     if (r.status === 429) msg = 'Zu viele Anmelde-Mails in kurzer Zeit. In etwa einer Stunde nochmal versuchen.';
     else { try { const j = await r.json(); if (j.msg) msg = 'Senden fehlgeschlagen: ' + j.msg; } catch (e) {} }
@@ -1085,16 +1125,17 @@
   // ---------- boot ----------
   load();
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
-  // magic-link return: tokens arrive in the URL hash, never on the server
+  // magic-link return: tokens arrive in the URL hash, never on the server. The address is cleaned at once;
+  // whether the tokens are used is decided further down, in adoptLink.
+  let linkTokens = null;
   if (location.hash.includes('access_token=')) {
     try {
       const q = new URLSearchParams(location.hash.slice(1));
-      if (q.get('access_token') && q.get('refresh_token')) adoptSession({ access_token: q.get('access_token'), refresh_token: q.get('refresh_token') });
+      if (q.get('access_token') && q.get('refresh_token')) linkTokens = { access_token: q.get('access_token'), refresh_token: q.get('refresh_token') };
     } catch (e) {}
     history.replaceState(null, '', location.pathname);
   }
   let openMenuOnBoot = false;
-  const hadTokens = !!session && !localStorage.getItem('stillzeit.welcomed.' + session.uid);
   // invite link: #join=CODE is remembered until this phone is signed in, then used once
   if (location.hash.startsWith('#join=')) {
     let code = '';
@@ -1103,19 +1144,27 @@
     history.replaceState(null, '', location.pathname);
     openMenuOnBoot = true;
   }
-  if (hadTokens && !db.household_id) openMenuOnBoot = true;   // just came back from the mail link: show the next step
-  if (session) localStorage.setItem('stillzeit.welcomed.' + session.uid, '1');
   localStorage.setItem(DB_KEY, JSON.stringify(db));
   syncButton();
   render();
-  if (openMenuOnBoot) setTimeout(() => $('menu').click(), 150);
   window.addEventListener('hashchange', () => { if (location.hash.startsWith('#join=')) location.reload(); });
-  if (SYNC && session) {
-    const pending = localStorage.getItem(PENDING_KEY);
-    if (db.household_id) { syncNow(); loadFamilyCode(); }
-    else if (pending) joinWithCode(pending, null);
-    else findMyHousehold().then(hid => { if (hid) return adoptHousehold(hid).then(() => { renderSyncBox(); loadFamilyCode(); }); });
-  }
+  // runs once the sign-in link (if there was one) is settled; linkMsg says why a link was not used
+  const startSync = linkMsg => {
+    const hadTokens = !!session && !localStorage.getItem('stillzeit.welcomed.' + session.uid);
+    if (hadTokens && !db.household_id) openMenuOnBoot = true;   // just came back from the mail link: show the next step
+    if (session) localStorage.setItem('stillzeit.welcomed.' + session.uid, '1');
+    if (openMenuOnBoot || linkMsg) setTimeout(() => {
+      if (sheet.classList.contains('open')) renderSyncBox(); else $('menu').click();
+      if (linkMsg) $('stats').textContent = linkMsg + (session ? '' : ' Bitte unten einen neuen anfordern.');
+    }, 150);
+    if (SYNC && session) {
+      const pending = localStorage.getItem(PENDING_KEY);
+      if (db.household_id) { syncNow(); loadFamilyCode(); }
+      else if (pending) joinWithCode(pending, null);
+      else findMyHousehold().then(hid => { if (hid) return adoptHousehold(hid).then(() => { renderSyncBox(); loadFamilyCode(); }); });
+    }
+  };
+  if (linkTokens) adoptLink(linkTokens).then(startSync, () => startSync(LINK_BAD)); else startSync('');
   if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');
 })();
 </script>
