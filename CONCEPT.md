@@ -164,6 +164,7 @@ db = {
 - v12 (2026-09-24): Alle Einträge löschen mit automatischer Sicherung und Rückgängig.
 - v13 (2026-09-24): Löschen pro Bereich, Rückgängig pro Löschvorgang.
 - v14 (2026-10-08): Screen Geburt mit einem Button, Vorschlägen, eigenen Kategorien, Zeitleiste; Zeit korrigieren.
+- v15 (2026-10-09): Service Worker löscht nur noch eigene alte Caches (stillzeit-), die Offline-Kopien der anderen Apps auf derselben Adresse bleiben erhalten.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.
