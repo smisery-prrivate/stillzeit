@@ -1,0 +1,8 @@
+#!/bin/sh
+# Refuses a commit whose index.html carries a stale script fingerprint (the app would stay blank).
+# Active through:  git config core.hooksPath tools/hooks
+if ! command -v node >/dev/null 2>&1; then
+  echo "pre-commit: node not found, script fingerprint NOT checked. Run: node tools/csp-hash.js --check" >&2
+  exit 0
+fi
+git show :index.html | node tools/csp-hash.js --check - || exit 1

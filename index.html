@@ -2,6 +2,12 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
+<!-- Content-Security-Policy: only this page's own script runs, nothing that arrives inside data.
+     The sha256 value is the fingerprint of the inline script block at the bottom. After ANY change to that block run
+         node tools/csp-hash.js
+     otherwise the browser refuses the script and the app stays blank (tools/hooks/pre-commit checks this).
+     connect-src names the Supabase project from config.js; both change together. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-ntHzDj0Tjv1SeW9l2eBvSUkz87mV2/l+s1S6o8rWwnI='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e0607e">
 <link rel="manifest" href="manifest.json">
@@ -170,7 +176,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v15</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v16</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -251,6 +257,9 @@
   let tick = null;
 
   // ---------- storage ----------
+  // side is L, R or nothing. Anything else (a synced row, a restored file) is dropped before it is stored, sent or shown.
+  const sideOf = s => s === 'L' || s === 'R' ? s : '';
+  const cleanEv = ev => { if (ev && ev.side !== undefined && !sideOf(ev.side)) delete ev.side; return ev; };
   const sigOf = ev => { const c = Object.assign({}, ev); delete c.updated_at; return JSON.stringify(c); };
   function emptyDb() {
     const now = Date.now();
@@ -280,6 +289,7 @@
     if (!db.settings) db.settings = { minSeconds: 0 };
     for (const c of db.children) if (!c.updated_at) c.updated_at = c.created_at || Date.now();
     migrateLegacy(db);
+    db.events.forEach(cleanEv);
     snap = {}; for (const ev of db.events) snap[ev.id] = sigOf(ev); for (const c of db.children) snap['c:' + c.id] = sigOf(c);
   }
   function mergeInto(list, inc, key) {
@@ -437,7 +447,8 @@
         const el = document.createElement('div'); el.className = 'row' + (armed === it.id ? ' armed' : '');
         let inner;
         if (it.type === 'feed') {
-          inner = '<span class="s ' + (it.side || 'none') + '">' + (it.side || '') + '</span><span class="t">' + hhmm(it.start) + ' – ' + hhmm(it.end) + '</span><span class="d">' + durLabel(it.end - it.start) + '</span>';
+          const sd = sideOf(it.side);
+          inner = '<span class="s ' + (sd || 'none') + '">' + sd + '</span><span class="t">' + hhmm(it.start) + ' – ' + hhmm(it.end) + '</span><span class="d">' + durLabel(it.end - it.start) + '</span>';
         } else if (it.type === 'pee' || it.type === 'poo' || it.type === 'cough') {
           inner = '<span class="s ' + it.type + '">' + TYPE_BADGE[it.type] + '</span><span class="t">' + hhmm(it.start) + '</span><span class="d">' + TYPE_LABEL[it.type] + '</span>';
         } else if (it.type === 'birth') {
@@ -465,7 +476,7 @@
     renderSince();
     renderSyncLine();
   }
-  const escapeHtml = t => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const escapeHtml = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   function renderSince() {
     const el = $('since'), sc = cur(), run = runningFeed();
     const sideName = s => s === 'L' ? 'links' : s === 'R' ? 'rechts' : '';
@@ -505,7 +516,7 @@
     }
     taps.hidden = true; cancel.classList.remove('gone');
     big.hidden = !run; starts.hidden = !!run;
-    big.classList.remove('L', 'R'); if (run && run.side) big.classList.add(run.side);
+    big.classList.remove('L', 'R'); if (run && sideOf(run.side)) big.classList.add(run.side);
     cancel.classList.toggle('show', !!run);
     if (run) {
       const upd = () => { big.querySelector('.clock').textContent = clock(Date.now() - run.start); };
@@ -596,7 +607,7 @@
     {
       const f = feeds(); const m = byDay(f, N); const tf = m.get(today) || [];
       const w7 = days.slice(-7).map(d => m.get(d.key)); const avgN = w7.reduce((a, r) => a + r.length, 0) / 7; const avgM = w7.reduce((a, r) => a + r.reduce((x, e) => x + (e.end - e.start), 0), 0) / 7;
-      const stacks = days.map(d => { const r = m.get(d.key); return [{ v: r.filter(e => e.side === 'L').reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.L }, { v: r.filter(e => e.side === 'R').reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.R }, { v: r.filter(e => !e.side).reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.feed }]; });
+      const stacks = days.map(d => { const r = m.get(d.key); return [{ v: r.filter(e => e.side === 'L').reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.L }, { v: r.filter(e => e.side === 'R').reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.R }, { v: r.filter(e => !sideOf(e.side)).reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.feed }]; });
       cards.push({ key: 'feed', title: 'Stillen', sum: 'Heute ' + tf.length + ' mal · ' + durLabel(tf.reduce((a, e) => a + (e.end - e.start), 0)) + '<br>Ø letzte 7 Tage: ' + fmtNum(avgN, 1) + ' mal · ' + durLabel(avgM) + ' pro Tag',
         chart: f.length ? legend([{ c: C.L, l: 'links' }, { c: C.R, l: 'rechts' }]) + svgBars(days, stacks, { fmt: v => v + ' min', labels: (st, i) => m.get(days[i].key).length + '×' }) + '<div class="cap">Minuten pro Tag, letzte 14 Tage. Die Zahl über dem Balken ist die Anzahl.</div>' : '<div class="cap">Noch keine Daten.</div>' });
     }
@@ -726,10 +737,10 @@
     return r.json();
   };
   const evToRow = e => ({ id: e.id, household_id: db.household_id, child_id: e.child_id, type: e.type, start_ts: e.start, end_ts: e.end || null,
-    value: e.value ?? null, unit: e.unit || null, note: e.note || null, side: e.side || null,
+    value: e.value ?? null, unit: e.unit || null, note: e.note || null, side: sideOf(e.side) || null,
     created_by: (session && session.uid) || null, created_at: e.created_at || e.start, updated_at: e.updated_at, deleted: !!e.deleted });
   const rowToEv = r => { const e = { id: r.id, type: r.type, child_id: r.child_id, start: +r.start_ts, created_by: r.created_by, created_at: +r.created_at, updated_at: +r.updated_at };
-    if (r.end_ts != null) e.end = +r.end_ts; if (r.value != null) e.value = +r.value; if (r.unit) e.unit = r.unit; if (r.note) e.note = r.note; if (r.side) e.side = r.side; if (r.deleted) e.deleted = true; return e; };
+    if (r.end_ts != null) e.end = +r.end_ts; if (r.value != null) e.value = +r.value; if (r.unit) e.unit = r.unit; if (r.note) e.note = r.note; if (sideOf(r.side)) e.side = r.side; if (r.deleted) e.deleted = true; return e; };
   const chToRow = c => ({ id: c.id, household_id: db.household_id, name: c.name, born: c.born || null, created_at: c.created_at || c.updated_at, updated_at: c.updated_at, deleted: !!c.deleted });
   const rowToCh = r => { const c = { id: r.id, name: r.name, created_at: +r.created_at, updated_at: +r.updated_at }; if (r.born != null) c.born = +r.born; if (r.deleted) c.deleted = true; return c; };
 
@@ -882,7 +893,7 @@
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { $('authHint').textContent = 'Bitte eine gültige E-Mail eingeben.'; return; }
         $('authHint').textContent = 'Schicke…';
         const res = await sendMagicLink(email);
-        $('authHint').innerHTML = res.ok ? '<b>Mail ist unterwegs.</b> Öffne den Link darin auf diesem Handy. Die App geht dann von selbst weiter.' : res.msg;
+        $('authHint').innerHTML = res.ok ? '<b>Mail ist unterwegs.</b> Öffne den Link darin auf diesem Handy. Die App geht dann von selbst weiter.' : escapeHtml(res.msg);
       });
       return;
     }
@@ -921,7 +932,7 @@
     box.innerHTML = '<div class="famcard' + (err ? ' err' : '') + '"><div class="ft">' + (err ? '⚠ Abgleich hakt' : off ? '⏸ Offline' : '✓ Familie verbunden') + '</div>' +
         '<div class="fs">' + (who ? who + '<br>' : '') + 'Gleicht sich von selbst ab · zuletzt ' + lastOkLabel() + (err && syncMsg ? '<br>' + escapeHtml(syncMsg) : '') + '</div></div>' +
       '<button id="shareCode" class="primary">Partner einladen</button>' +
-      '<div class="hint">Oder den Code direkt eingeben lassen: <b>' + (familyCode || '…') + '</b></div>' +
+      '<div class="hint">Oder den Code direkt eingeben lassen: <b>' + escapeHtml(familyCode || '…') + '</b></div>' +
       '<button id="leaveFam" class="quiet">Dieses Handy von der Familie trennen</button>';
     $('shareCode').addEventListener('click', async () => {
       if (!familyCode) return;
@@ -1040,7 +1051,7 @@
       if (inc.schema !== 2 || !Array.isArray(inc.events)) throw new Error('kein Stillzeit-Export');
       let n = 0;
       for (const c of inc.children || []) if (mergeInto(db.children, c, 'c:')) n++;
-      for (const o of inc.events) if (mergeInto(db.events, o, '')) n++;
+      for (const o of inc.events) if (mergeInto(db.events, cleanEv(o), '')) n++;
       const now = Date.now();
       for (const o of inc.events) { const ev = db.events.find(x => x.id === o.id); if (ev) { ev.updated_at = now; snap[ev.id] = sigOf(ev); } }
       localStorage.setItem(DB_KEY, JSON.stringify(db)); scheduleSync(); syncButton(); render();
@@ -1084,7 +1095,8 @@
   const hadTokens = !!session && !localStorage.getItem('stillzeit.welcomed.' + session.uid);
   // invite link: #join=CODE is remembered until this phone is signed in, then used once
   if (location.hash.startsWith('#join=')) {
-    const code = decodeURIComponent(location.hash.slice(6)).trim().toUpperCase();
+    let code = '';
+    try { code = decodeURIComponent(location.hash.slice(6)).trim().toUpperCase(); } catch (e) {}   // a mangled link must not stop the app
     if (code) { if (db.household_id) $('stats').textContent = 'Dieses Handy ist schon in einer Familie.'; else localStorage.setItem(PENDING_KEY, code); }
     history.replaceState(null, '', location.pathname);
     openMenuOnBoot = true;

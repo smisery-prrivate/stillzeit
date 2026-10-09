@@ -147,6 +147,19 @@ db = {
 - Einmalige Einrichtung im Supabase-Dashboard: `supabase-schema.sql` im SQL-Editor ausführen und
   die App-URL unter Auth → URL Configuration → Redirect URLs eintragen.
 
+## Sicherheit (seit v16)
+- Alles, was über den Familien-Sync, eine Sicherungsdatei oder den gemeinsamen Browser-Speicher kommt, gilt
+  als fremd. `side` ist nur `L`, `R` oder leer (`sideOf`), alles andere wird beim Laden, Empfangen, Senden
+  und Anzeigen verworfen. Freitext (`note`, Servertexte, Familien-Code) geht nur über `escapeHtml` in die Seite.
+- Die Datenbank prüft `side` zusätzlich selbst (`sz_events_side_chk`, siehe `supabase-fix-2.sql`).
+- **Content-Security-Policy** im Kopf von `index.html`: es läuft nur das eigene Skript. Die Seite trägt dafür
+  den Fingerabdruck (sha256) ihres Skript-Blocks. Stimmt er nicht, startet die App nicht.
+- **Release-Schritte:** Versions-Label in `index.html`, `CACHE` in `sw.js`, Zeile hier unter Versionen, und nach
+  jeder Änderung am Skript `node tools/csp-hash.js`. Der Commit-Check `tools/hooks/pre-commit` lehnt einen
+  veralteten Fingerabdruck ab (einmal pro Kopie des Repos einschalten: `git config core.hooksPath tools/hooks`).
+- Tests liegen in `_preview/tests` (nicht im Repo): `t1-inject.js` prüft die Einschleusung, `t2-smoke.js` alle
+  Screens, Sync und die Policy.
+
 ## Versionen
 - v1 (2026-09-21): Stoppuhr, Einträge, Tagesgruppen mit Farbe, "vor x min", Löschen.
 - v2 (2026-09-21): Schema 2 (Event-Log, Kinder, UUIDs, created_by), Menü mit JSON/CSV-Export
@@ -165,6 +178,9 @@ db = {
 - v13 (2026-09-24): Löschen pro Bereich, Rückgängig pro Löschvorgang.
 - v14 (2026-10-08): Screen Geburt mit einem Button, Vorschlägen, eigenen Kategorien, Zeitleiste; Zeit korrigieren.
 - v15 (2026-10-09): Service Worker löscht nur noch eigene alte Caches (stillzeit-), die Offline-Kopien der anderen Apps auf derselben Adresse bleiben erhalten.
+- v16 (2026-10-09): Sicherheit: `side` nur noch L oder R (Anzeige, Sync, Import, gespeicherte Daten), Servertexte
+  und Familien-Code werden maskiert, Content-Security-Policy mit Skript-Fingerabdruck, kaputter Einladungs-Link
+  stoppt die App nicht mehr. Datenbank-Regel in `supabase-fix-2.sql`.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.

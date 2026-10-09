@@ -39,7 +39,7 @@ create table if not exists public.sz_events (
   value double precision,
   unit text,
   note text,
-  side text,
+  side text constraint sz_events_side_chk check (side is null or side in ('L','R')),
   created_by uuid not null default auth.uid(),
   created_at bigint not null,
   updated_at bigint not null,

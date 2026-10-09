@@ -1,5 +1,6 @@
 // Bump CACHE on every release; keep it equal to the footer version label.
-const CACHE = 'stillzeit-v15';
+// If the script in index.html changed, also run: node tools/csp-hash.js (see the comment at the top of index.html).
+const CACHE = 'stillzeit-v16';
 const ASSETS = ['.', 'index.html', 'config.js', 'manifest.json', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
