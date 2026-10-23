@@ -7,7 +7,7 @@
          node tools/csp-hash.js
      otherwise the browser refuses the script and the app stays blank (tools/hooks/pre-commit checks this).
      connect-src names the Supabase project from config.js; both change together. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-+34d9tYqEZVN7OT+TaxOY2pQPAqifFIjwegrVWrSEqc='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Na6+0DSY1LTfYw/LgRBGD673eykFDefjUrbsMZ4pqgI='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e0607e">
 <link rel="manifest" href="manifest.json">
@@ -73,7 +73,34 @@
   #big .lbl { font-size: 15px; font-weight: 600; opacity: .9; }
   @keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.025); } }
   #cancel { height: 44px; padding: 0 18px; border: none; border-radius: 22px; background: transparent; color: var(--muted); font-size: 14px; visibility: hidden; }
-  #cancel.show { visibility: visible; }
+  #cancel.show, #fixStart.show { visibility: visible; }
+  .runrow { display: flex; gap: 6px; justify-content: center; }
+  #fixStart { height: 44px; padding: 0 18px; border: none; border-radius: 22px; background: transparent; color: var(--muted); font-size: 14px; visibility: hidden; }
+  #fixStart.gone { display: none; }
+  #amountAsk { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; margin: 0 0 14px; }
+  #amountAsk[hidden] { display: none; }
+  #amountAsk .q { font-size: 14px; font-weight: 600; margin-right: 4px; }
+  #amountAsk button { height: 40px; min-width: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 20px; background: var(--bg); color: var(--ink); font-size: 15px; }
+  #amountAsk button.x { border: none; background: transparent; color: var(--muted); margin-left: auto; }
+  .row.armed .d, .row.armed .sub { display: none; }
+  #edit { position: fixed; inset: 0; background: rgba(43,37,48,.35); z-index: 11; display: none; align-items: flex-end; justify-content: center; }
+  #edit.open { display: flex; }
+  #edit .panel { width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; background: var(--card); border-radius: 20px 20px 0 0; padding: 18px 16px calc(env(safe-area-inset-bottom) + 20px); }
+  #edit h2 { font-size: 18px; margin-bottom: 14px; }
+  #edit .frow { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  #edit .frow[hidden] { display: none; }
+  #edit .frow > label { width: 82px; flex: none; font-size: 14px; color: var(--muted); }
+  #edit input { flex: 1; min-width: 0; height: 50px; border: 1.5px solid var(--line); border-radius: 12px; padding: 0 12px; font: inherit; font-size: 17px; background: var(--card); color: var(--ink); }
+  #edit input:focus { outline: none; border-color: var(--accent); }
+  #edit .seg { display: flex; gap: 8px; flex: 1; }
+  #edit .seg button { flex: 1; height: 46px; border: 1.5px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink); font-size: 16px; font-weight: 600; }
+  #edit .seg button.on[data-s=L] { background: var(--L); border-color: var(--L); color: #fff; }
+  #edit .seg button.on[data-s=R] { background: var(--R); border-color: var(--R); color: #fff; }
+  #edit #eUnit { font-size: 16px; color: var(--muted); min-width: 30px; }
+  #edit .ehint { font-size: 13px; color: #b0304f; min-height: 18px; padding: 0 2px 8px; }
+  #edit .btns { display: flex; gap: 8px; }
+  #edit .btns button { flex: 1; height: 52px; border: none; border-radius: 12px; font-size: 16px; background: var(--bg); color: var(--ink); }
+  #edit .btns button.primary { background: var(--accent); color: #fff; font-weight: 600; }
 
   /* screen navigation */
   .nav { display: flex; justify-content: center; align-items: center; gap: 10px; color: var(--ink); font-size: 16px; font-weight: 600; height: 56px; border-radius: 16px; background: #f1ece9; user-select: none; cursor: pointer; letter-spacing: .01em; width: 100%; }
@@ -176,11 +203,12 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v18</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v19</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
   <div id="syncline"></div>
+  <div id="amountAsk" hidden></div>
   <div id="list"></div>
   <div id="empty" class="empty" hidden></div>
   <div class="dock">
@@ -190,8 +218,20 @@
     </div>
     <button id="big" hidden><span class="clock">00:00</span><span class="lbl">Stopp</span></button>
     <div id="taps" hidden></div>
-    <button id="cancel">Verwerfen</button>
+    <div class="runrow"><button id="fixStart">Beginn ändern</button><button id="cancel">Verwerfen</button></div>
     <div id="navBottom" class="nav" hidden><span class="tri">▼</span><span class="name"></span></div>
+  </div>
+</div>
+<div id="edit">
+  <div class="panel">
+    <h2 id="editTitle">Bearbeiten</h2>
+    <div class="frow" id="eSideRow"><label>Seite</label><div class="seg"><button data-s="L">Links</button><button data-s="R">Rechts</button></div></div>
+    <div class="frow" id="eStartRow"><label id="eStartLbl" for="eStart">Beginn</label><input id="eStart" type="datetime-local"></div>
+    <div class="frow" id="eEndRow"><label for="eEnd">Ende</label><input id="eEnd" type="datetime-local"></div>
+    <div class="frow" id="eValRow"><label id="eValLbl" for="eVal">Menge</label><input id="eVal" type="text" inputmode="decimal" autocomplete="off"><span id="eUnit"></span></div>
+    <div class="frow" id="eTextRow"><input id="eText" type="text" autocomplete="off"></div>
+    <div class="ehint" id="eHint"></div>
+    <div class="btns"><button id="eCancel">Abbrechen</button><button id="eSave" class="primary">Speichern</button></div>
   </div>
 </div>
 <div id="entry">
@@ -375,7 +415,7 @@
       buttons: [{ t: 'fever', label: 'Fieber', cls: 'fever', input: { unit: '°C', placeholder: 'z.B. 38,4' } }, { t: 'cough', label: 'Husten', cls: 'cough' }, { t: 'med', label: 'Notiz', cls: 'note', input: { text: true, placeholder: 'z.B. Schnupfen, Zäpfchen' } }] },
     { key: 'dash', title: 'Übersicht', types: [], empty: '', buttons: [] }
   ];
-  const TYPE_LABEL = { pee: 'Urin', poo: 'Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', feed: 'Stillen' };
+  const TYPE_LABEL = { birth: 'Geburt', pee: 'Urin', poo: 'Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', feed: 'Stillen' };
   const TYPE_BADGE = { pee: 'U', poo: 'S', weight: 'kg', height: 'cm', fever: '°', cough: 'H', med: '✎' };
   let screen = SCREENS.findIndex(x => x.key === localStorage.getItem('stillzeit.screen'));
   if (screen < 0) screen = SCREENS.findIndex(x => x.key === 'feed');
@@ -432,7 +472,8 @@
       if (sc.key === 'feed') {
         const total = rows.reduce((a, r) => a + (r.end - r.start), 0);
         const col = dayColor(rows.length); head.style.background = col.bg; head.style.color = col.fg;
-        right = '<span class="cnt">' + rows.length + ' mal</span> <span class="sum">· ' + durLabel(total) + ' gesamt</span>';
+        const withMl = rows.filter(r => typeof r.value === 'number' && isFinite(r.value));
+        right = '<span class="cnt">' + rows.length + ' mal</span> <span class="sum">· ' + durLabel(total) + ' gesamt' + (withMl.length ? ' · ' + fmtNum(withMl.reduce((a, r) => a + r.value, 0), 0) + ' ml' : '') + '</span>';
       } else if (sc.key === 'diaper') {
         const u = rows.filter(r => r.type === 'pee').length, st = rows.filter(r => r.type === 'poo').length;
         const col = dayColor(rows.length, 40); head.style.background = col.bg; head.style.color = col.fg;
@@ -448,7 +489,7 @@
         let inner;
         if (it.type === 'feed') {
           const sd = sideOf(it.side);
-          inner = '<span class="s ' + (sd || 'none') + '">' + sd + '</span><span class="t">' + hhmm(it.start) + ' – ' + hhmm(it.end) + '</span><span class="d">' + durLabel(it.end - it.start) + '</span>';
+          inner = '<span class="s ' + (sd || 'none') + '">' + sd + '</span><span class="t">' + hhmm(it.start) + ' – ' + hhmm(it.end) + '</span><span class="d">' + durLabel(it.end - it.start) + (typeof it.value === 'number' && isFinite(it.value) ? ' · ' + fmtNum(it.value, 0) + ' ml' : '') + '</span>';
         } else if (it.type === 'pee' || it.type === 'poo' || it.type === 'cough') {
           inner = '<span class="s ' + it.type + '">' + TYPE_BADGE[it.type] + '</span><span class="t">' + hhmm(it.start) + '</span><span class="d">' + TYPE_LABEL[it.type] + '</span>';
         } else if (it.type === 'birth') {
@@ -461,10 +502,10 @@
           if (prev && it.type !== 'fever') { const d = it.value - prev.value; delta = '<span class="sub">' + (d >= 0 ? '+' : '−') + (it.type === 'weight' ? fmtNum(Math.abs(d) * 1000, 0) + ' g' : fmtNum(Math.abs(d), 1) + ' cm') + '</span>'; }
           inner = '<span class="s ' + (it.type === 'fever' ? 'fever' : 'measure') + '">' + TYPE_BADGE[it.type] + '</span><span class="t">' + hhmm(it.start) + delta + '</span><span class="d">' + valueLabel(it) + '</span>';
         }
-        el.innerHTML = inner + (it.type !== 'feed' ? '<button class="edit">Zeit</button>' : '') + '<button class="del">Löschen</button>';
+        el.innerHTML = inner + '<button class="edit">Bearbeiten</button><button class="del">Löschen</button>';
         el.addEventListener('click', e => {
           if (e.target.classList.contains('del')) { it.deleted = true; armed = null; save(); render(); return; }
-          if (e.target.classList.contains('edit')) { openEntry({ label: 'Zeitpunkt ändern', edit: it, input: { timeOnly: true, time: true } }); return; }
+          if (e.target.classList.contains('edit')) { openEdit(it); return; }
           armed = armed === it.id ? null : it.id; render();
         });
         wrap.appendChild(el);
@@ -475,6 +516,7 @@
     $('empty').hidden = rows0.length > 0;
     renderSince();
     renderSyncLine();
+    renderAmountAsk();
   }
   const escapeHtml = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   function renderSince() {
@@ -497,12 +539,12 @@
   }
 
   // ---------- the dock: feed buttons or tap buttons per screen ----------
-  const big = $('big'), cancel = $('cancel'), starts = $('starts'), taps = $('taps');
+  const big = $('big'), cancel = $('cancel'), starts = $('starts'), taps = $('taps'), fixStart = $('fixStart');
   function syncButton() {
     const sc = cur(), run = runningFeed();
     if (tick) { clearInterval(tick); tick = null; }
     if (sc.key !== 'feed') {
-      big.hidden = true; starts.hidden = true; cancel.classList.remove('show'); cancel.classList.add('gone');
+      big.hidden = true; starts.hidden = true; cancel.classList.remove('show'); cancel.classList.add('gone'); fixStart.classList.remove('show'); fixStart.classList.add('gone');
       if (!sc.buttons.length) { taps.hidden = true; renderSince(); return; }
       taps.hidden = false; taps.className = 'n' + sc.buttons.length; taps.innerHTML = '';
       for (const b of sc.buttons) {
@@ -514,10 +556,10 @@
       renderSince();
       return;
     }
-    taps.hidden = true; cancel.classList.remove('gone');
+    taps.hidden = true; cancel.classList.remove('gone'); fixStart.classList.remove('gone');
     big.hidden = !run; starts.hidden = !!run;
     big.classList.remove('L', 'R'); if (run && sideOf(run.side)) big.classList.add(run.side);
-    cancel.classList.toggle('show', !!run);
+    cancel.classList.toggle('show', !!run); fixStart.classList.toggle('show', !!run);
     if (run) {
       const upd = () => { big.querySelector('.clock').textContent = clock(Date.now() - run.start); };
       upd(); big.querySelector('.lbl').textContent = 'Stopp' + (run.side === 'L' ? ' · links' : run.side === 'R' ? ' · rechts' : '');
@@ -532,6 +574,7 @@
   }
   function startFeed(side) {
     if (runningFeed()) return;
+    askAmountFor = null;
     addEvent({ type: 'feed', start: Date.now(), side });
     syncButton();
   }
@@ -541,9 +584,98 @@
     const run = runningFeed();
     if (!run) { syncButton(); return; }
     run.end = Date.now();
+    askAmountFor = run.id;   // offer the amount right after stopping; it is optional
     armed = null; save();
     syncButton(); render();
   });
+  fixStart.addEventListener('click', () => { const run = runningFeed(); if (run) openEdit(run); });
+
+  // ---------- amount after a feed: one tap, optional, can be added later via Bearbeiten ----------
+  let askAmountFor = null;
+  const AMOUNTS = [0, 5, 10, 20, 30, 50];
+  function renderAmountAsk() {
+    const box = $('amountAsk');
+    const ev = askAmountFor && cur().key === 'feed' ? db.events.find(e => e.id === askAmountFor) : null;
+    if (!ev || ev.deleted || !ev.end || typeof ev.value === 'number') { box.hidden = true; box.innerHTML = ''; return; }
+    box.hidden = false; box.innerHTML = '<span class="q">Wie viel?</span>';
+    for (const n of AMOUNTS) {
+      const b = document.createElement('button'); b.textContent = n + ' ml';
+      b.addEventListener('click', () => { ev.value = n; ev.unit = 'ml'; askAmountFor = null; save(); render(); });
+      box.appendChild(b);
+    }
+    const other = document.createElement('button'); other.textContent = 'Andere';
+    other.addEventListener('click', () => { askAmountFor = null; render(); openEdit(ev, 'value'); });
+    const x = document.createElement('button'); x.className = 'x'; x.textContent = '✕'; x.setAttribute('aria-label', 'Ohne Menge');
+    x.addEventListener('click', () => { askAmountFor = null; render(); });
+    box.appendChild(other); box.appendChild(x);
+  }
+
+  // ---------- edit any entry: side, start, end, amount for feeds; value or text plus time for the rest ----------
+  const editBox = $('edit'); let editIt = null, editSide = '';
+  const VALUE_UNIT = { feed: 'ml', weight: 'kg', height: 'cm', fever: '°C' };
+  function paintSide() { for (const b of editBox.querySelectorAll('.seg button')) b.classList.toggle('on', b.dataset.s === editSide); }
+  for (const b of editBox.querySelectorAll('.seg button')) b.addEventListener('click', () => { editSide = b.dataset.s; paintSide(); });
+  function openEdit(it, focus) {
+    editIt = it;
+    const feed = it.type === 'feed', running = feed && !it.end;
+    const hasVal = (feed && !running) || it.type === 'weight' || it.type === 'height' || it.type === 'fever';
+    const hasText = it.type === 'med' || it.type === 'birth';
+    $('editTitle').textContent = running ? 'Laufendes Stillen' : (TYPE_LABEL[it.type] || 'Eintrag') + ' bearbeiten';
+    $('eSideRow').hidden = !feed; editSide = sideOf(it.side); paintSide();
+    $('eStartLbl').textContent = feed ? 'Beginn' : 'Zeitpunkt';
+    $('eStart').value = toLocalInput(it.start); $('eStart').max = toLocalInput(Date.now() + 60000);
+    $('eEndRow').hidden = !feed || running;
+    $('eEnd').value = it.end ? toLocalInput(it.end) : ''; $('eEnd').max = toLocalInput(Date.now() + 60000);
+    $('eValRow').hidden = !hasVal;
+    $('eValLbl').textContent = feed ? 'Menge' : it.type === 'fever' ? 'Fieber' : TYPE_LABEL[it.type];
+    $('eUnit').textContent = VALUE_UNIT[it.type] || '';
+    $('eVal').value = typeof it.value === 'number' && isFinite(it.value) ? String(it.value).replace('.', ',') : '';
+    $('eVal').placeholder = feed ? 'leer lassen, 0 = nichts' : '';
+    $('eTextRow').hidden = !hasText; $('eText').value = it.note || '';
+    $('eHint').textContent = '';
+    editBox.classList.add('open'); history.pushState({ edit: 1 }, '');
+    if (focus === 'value') setTimeout(() => $('eVal').focus(), 50);
+  }
+  function closeEdit() { editBox.classList.remove('open'); editIt = null; }
+  function saveEdit() {
+    const it = editIt; if (!it) return;
+    const feed = it.type === 'feed', running = feed && !it.end, hint = t => { $('eHint').textContent = t; };
+    const readTime = (el, orig) => { if (el.value === toLocalInput(orig)) return orig; const t = new Date(el.value).getTime(); return isFinite(t) ? t : NaN; };
+    const start = readTime($('eStart'), it.start), end = feed && !running ? readTime($('eEnd'), it.end) : it.end, nowT = Date.now();
+    if (!isFinite(start)) return hint('Bitte einen Zeitpunkt wählen.');
+    if (start > nowT + 60000) return hint('Der Zeitpunkt liegt in der Zukunft.');
+    if (feed && !running) {
+      if (!isFinite(end)) return hint('Bitte ein Ende wählen.');
+      if (end > nowT + 60000) return hint('Das Ende liegt in der Zukunft.');
+      if (end <= start) return hint('Das Ende muss nach dem Beginn liegen.');
+    }
+    let value = it.value, clearValue = false;
+    if (!$('eValRow').hidden) {
+      const raw = $('eVal').value.trim();
+      if (raw === '' && feed) clearValue = true;
+      else {
+        const v = Number(raw.replace(',', '.'));
+        if (raw === '' || !isFinite(v) || v < 0 || (!feed && v === 0)) return hint(feed ? 'Menge als Zahl in ml, 0 ist erlaubt.' : 'Bitte einen Wert eingeben.');
+        value = v;
+      }
+    }
+    let note = it.note;
+    if (!$('eTextRow').hidden) { note = $('eText').value.trim(); if (!note) return hint('Bitte einen Text eingeben.'); }
+    it.start = start;
+    if (feed && !running) it.end = end;
+    if (feed && editSide) it.side = editSide;
+    if (!$('eValRow').hidden) {
+      if (clearValue) { delete it.value; delete it.unit; }
+      else { it.value = value; it.unit = feed ? 'ml' : it.type === 'fever' ? 'C' : VALUE_UNIT[it.type]; }
+    }
+    if (!$('eTextRow').hidden) it.note = note;
+    armed = null; save(); history.back(); syncButton(); render();
+  }
+  $('eCancel').addEventListener('pointerdown', e => { e.preventDefault(); history.back(); });
+  $('eSave').addEventListener('pointerdown', e => { e.preventDefault(); saveEdit(); });
+  for (const id of ['eVal', 'eText']) $(id).addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); saveEdit(); } });
+  editBox.addEventListener('click', e => { if (e.target === editBox) history.back(); });
+  window.addEventListener('popstate', closeEdit);
   cancel.addEventListener('click', () => { const run = runningFeed(); if (run) { run.deleted = true; save(); } syncButton(); render(); });
 
   // ---------- dashboard: one card per area, tap opens its chart ----------
@@ -608,7 +740,8 @@
       const f = feeds(); const m = byDay(f, N); const tf = m.get(today) || [];
       const w7 = days.slice(-7).map(d => m.get(d.key)); const avgN = w7.reduce((a, r) => a + r.length, 0) / 7; const avgM = w7.reduce((a, r) => a + r.reduce((x, e) => x + (e.end - e.start), 0), 0) / 7;
       const stacks = days.map(d => { const r = m.get(d.key); return [{ v: r.filter(e => e.side === 'L').reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.L }, { v: r.filter(e => e.side === 'R').reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.R }, { v: r.filter(e => !sideOf(e.side)).reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.feed }]; });
-      cards.push({ key: 'feed', title: 'Stillen', sum: 'Heute ' + tf.length + ' mal · ' + durLabel(tf.reduce((a, e) => a + (e.end - e.start), 0)) + '<br>Ø letzte 7 Tage: ' + fmtNum(avgN, 1) + ' mal · ' + durLabel(avgM) + ' pro Tag',
+      const tfMl = tf.filter(e => typeof e.value === 'number' && isFinite(e.value));
+      cards.push({ key: 'feed', title: 'Stillen', sum: 'Heute ' + tf.length + ' mal · ' + durLabel(tf.reduce((a, e) => a + (e.end - e.start), 0)) + (tfMl.length ? ' · ' + fmtNum(tfMl.reduce((a, e) => a + e.value, 0), 0) + ' ml' : '') + '<br>Ø letzte 7 Tage: ' + fmtNum(avgN, 1) + ' mal · ' + durLabel(avgM) + ' pro Tag',
         chart: f.length ? legend([{ c: C.L, l: 'links' }, { c: C.R, l: 'rechts' }]) + svgBars(days, stacks, { fmt: v => v + ' min', labels: (st, i) => m.get(days[i].key).length + '×' }) + '<div class="cap">Minuten pro Tag, letzte 14 Tage. Die Zahl über dem Balken ist die Anzahl.</div>' : '<div class="cap">Noch keine Daten.</div>' });
     }
     // Windel

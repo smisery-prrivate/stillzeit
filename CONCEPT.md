@@ -35,9 +35,18 @@ wischen", das fühlte sich unzuverlässig an). Der zuletzt offene Screen wird ge
    Medizin = Fieberkurve mit 38-Grad-Linie und Husten pro Tag. Alles inline-SVG, eine Achse pro
    Grafik, keine Bibliothek, offline.
 
-**Zeit korrigieren (seit v14)**: bei allen Einträgen außer Stillen zeigt der Tipp auf die Zeile
-neben "Löschen" auch "Zeit". Damit lässt sich der Zeitpunkt nachträglich setzen, wenn man erst
-später zum Eintragen kommt.
+**Bearbeiten (seit v19, ersetzt "Zeit" aus v14)**: Tipp auf eine Zeile zeigt "Bearbeiten" und
+"Löschen". Stillen: Seite, Beginn, Ende, Menge (ml, leer = unbekannt, 0 = nichts gekommen).
+Gewicht, Größe, Fieber: Wert und Zeitpunkt. Notiz und Geburt: Text und Zeitpunkt. Windel und
+Husten: Zeitpunkt. Prüfungen: nichts in der Zukunft, Ende nach Beginn. Unveränderte Zeitfelder
+bleiben sekundengenau (das Feld zeigt nur Minuten).
+**Zu spät gestartet**: während das Stillen läuft, steht neben "Verwerfen" der Knopf
+"Beginn ändern" (Seite und Beginn).
+**Menge beim Stillen (seit v19)**: nach dem Stopp erscheint über der Liste die Leiste
+"Wie viel? 0 · 5 · 10 · 20 · 30 · 50 ml · Andere · ✕". Ein Tipp speichert, ✕ oder einfach
+weitermachen lässt die Menge leer. Gespeichert als `value` + `unit: 'ml'` (vorhandene Spalten,
+kein Schema-Update). Zeilen zeigen "12 min · 20 ml", der Tageskopf und die Übersicht die
+ml-Summe, sobald Mengen da sind.
 
 Alles landet im selben Event-Log, wird gleich gesynct und gleich exportiert.
 
@@ -194,6 +203,7 @@ db = {
   der letzten Stunde für genau diese Adresse angefordert hat. Sonst fragt die App und nennt die Adresse. Der Server
   muss jedes Token bestätigen. Vorher konnte ein zugeschickter Link ein Handy in ein fremdes Konto anmelden und
   dessen Einträge in die fremde Familie hochladen.
+- v19 (2026-10-23): Bearbeiten für alle Einträge, "Beginn ändern" beim laufenden Stillen, Menge in ml nach dem Stopp.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.
