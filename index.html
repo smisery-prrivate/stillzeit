@@ -7,7 +7,7 @@
          node tools/csp-hash.js
      otherwise the browser refuses the script and the app stays blank (tools/hooks/pre-commit checks this).
      connect-src names the Supabase project from config.js; both change together. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Na6+0DSY1LTfYw/LgRBGD673eykFDefjUrbsMZ4pqgI='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-gE/TPYTXlIqFO0iS3U+Raz8L0TO0G/yISMo4V5E/ePs='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e0607e">
 <link rel="manifest" href="manifest.json">
@@ -203,7 +203,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v19</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v20</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -1057,7 +1057,7 @@
     // 1) not signed in
     if (!session) {
       box.innerHTML = (pending
-          ? '<div class="step"><b>Du wurdest eingeladen.</b> Melde dich einmal mit deiner E-Mail an. Danach bist du automatisch in der Familie.</div>'
+          ? '<div class="step"><b>Du wurdest eingeladen.</b> Melde dich einmal mit deiner E-Mail an. Danach kannst du der Familie beitreten.</div>'
           : '<div class="step">Mit dem Partner teilen: beide Handys sehen dieselben Einträge. Dafür einmal mit E-Mail anmelden, ohne Passwort.</div>') +
         '<input id="email" type="email" placeholder="deine@email.de" autocomplete="email">' +
         '<button id="sendLink" class="primary">Anmelde-Link per Mail schicken</button><div class="hint" id="authHint"></div>';
@@ -1073,7 +1073,16 @@
 
     // 2) signed in, not yet in a family
     if (!db.household_id) {
-      if (pending) { box.innerHTML = '<div class="step">Trete der Familie bei…</div>'; return; }
+      if (pending) {
+        const mine = db.events.filter(e => !e.deleted).length;
+        box.innerHTML = '<div class="famcard"><div class="ft">Einladung in eine Familie</div><div class="fs">Code ' + escapeHtml(pending) + '</div></div>' +
+          '<div class="step">Möchtest du beitreten? Ihr seht dann dieselben Einträge' + (mine ? ', auch deine ' + mine + ' Einträge auf diesem Handy werden mit dieser Familie geteilt' : '') + '. Tritt nur bei, wenn du die Einladung von deinem Partner erwartest.</div>' +
+          '<button id="acceptJoin" class="primary">Beitreten</button><div class="hint" id="famHint"></div>' +
+          '<button id="declineJoin" class="quiet">Nicht beitreten</button>';
+        $('acceptJoin').addEventListener('click', () => joinWithCode(pending, $('famHint')));
+        $('declineJoin').addEventListener('click', () => { localStorage.removeItem(PENDING_KEY); renderSyncBox(); });
+        return;
+      }
       if (famStep === 'join') {
         box.innerHTML = '<div class="step">Gib den Code ein, den dein Partner dir geschickt hat.</div>' +
           '<input id="joinCode" type="text" placeholder="z.B. 3F9A-B21C" autocapitalize="characters" autocomplete="off">' +
@@ -1272,7 +1281,7 @@
   // invite link: #join=CODE is remembered until this phone is signed in, then used once
   if (location.hash.startsWith('#join=')) {
     let code = '';
-    try { code = decodeURIComponent(location.hash.slice(6)).trim().toUpperCase(); } catch (e) {}   // a mangled link must not stop the app
+    try { code = decodeURIComponent(location.hash.slice(6)).trim().toUpperCase().replace(/[^A-Z0-9-]/g, '').slice(0, 20); } catch (e) {}   // a mangled link must not stop the app
     if (code) { if (db.household_id) $('stats').textContent = 'Dieses Handy ist schon in einer Familie.'; else localStorage.setItem(PENDING_KEY, code); }
     history.replaceState(null, '', location.pathname);
     openMenuOnBoot = true;
@@ -1285,6 +1294,7 @@
   const startSync = linkMsg => {
     const hadTokens = !!session && !localStorage.getItem('stillzeit.welcomed.' + session.uid);
     if (hadTokens && !db.household_id) openMenuOnBoot = true;   // just came back from the mail link: show the next step
+    if (session && !db.household_id && localStorage.getItem(PENDING_KEY)) openMenuOnBoot = true;   // an invite waits for a yes or no
     if (session) localStorage.setItem('stillzeit.welcomed.' + session.uid, '1');
     if (openMenuOnBoot || linkMsg) setTimeout(() => {
       if (sheet.classList.contains('open')) renderSyncBox(); else $('menu').click();
@@ -1293,7 +1303,7 @@
     if (SYNC && session) {
       const pending = localStorage.getItem(PENDING_KEY);
       if (db.household_id) { syncNow(); loadFamilyCode(); }
-      else if (pending) joinWithCode(pending, null);
+      else if (pending) { /* the menu asks; joining needs a tap on "Beitreten" */ }
       else findMyHousehold().then(hid => { if (hid) return adoptHousehold(hid).then(() => { renderSyncBox(); loadFamilyCode(); }); });
     }
   };

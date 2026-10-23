@@ -147,8 +147,10 @@ db = {
      "Ich starte" und "Ich wurde eingeladen" (erst dann erscheint das Code-Feld).
   3. In der Familie: grüne Karte "✓ Familie verbunden · 2 Personen verbunden · gleicht sich von
      selbst ab", Button "Partner einladen" teilt einen **Einladungs-Link** (`#join=CODE`). Wer
-     den Link öffnet, sieht "Du wurdest eingeladen", meldet sich an und ist danach automatisch
-     drin. Der Code steht klein darunter als Rückfall.
+     den Link öffnet, sieht "Du wurdest eingeladen", meldet sich an und bekommt dann die Frage
+     "Einladung in eine Familie · Code … · Beitreten / Nicht beitreten" mit der Zahl der eigenen
+     Einträge, die geteilt würden (seit v20; vorher trat das Handy ohne Frage bei und lud seine
+     Einträge in die fremde Familie hoch). Der Code steht klein darunter als Rückfall.
   - Kein "Jetzt synchronisieren"-Knopf mehr: der Abgleich läuft automatisch. Wer es eilig hat,
     tippt die Statuszeile unter dem Titel an.
 - Status ist sichtbar: Zeile unter "Letztes Stillen" ("✓ Familie synchron · vor 2 min",
@@ -204,6 +206,7 @@ db = {
   muss jedes Token bestätigen. Vorher konnte ein zugeschickter Link ein Handy in ein fremdes Konto anmelden und
   dessen Einträge in die fremde Familie hochladen.
 - v19 (2026-10-23): Bearbeiten für alle Einträge, "Beginn ändern" beim laufenden Stillen, Menge in ml nach dem Stopp.
+- v20 (2026-10-23): Einladungs-Link fragt vor dem Beitreten; Code aus dem Link nur A-Z, 0-9, Bindestrich.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.
