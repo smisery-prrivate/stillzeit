@@ -7,7 +7,7 @@
          node tools/csp-hash.js
      otherwise the browser refuses the script and the app stays blank (tools/hooks/pre-commit checks this).
      connect-src names the Supabase project from config.js; both change together. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-gE/TPYTXlIqFO0iS3U+Raz8L0TO0G/yISMo4V5E/ePs='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-6ZF/RTh8UCu28NluBI3OtTMxRgrEWmPWS7dS9Zbw46E='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e0607e">
 <link rel="manifest" href="manifest.json">
@@ -34,7 +34,7 @@
   .dayhead { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px; border-radius: 12px; margin-bottom: 6px; font-size: 13px; font-weight: 600; letter-spacing: .02em; }
   .dayhead .cnt { font-size: 13px; font-weight: 700; }
   .dayhead .sum { font-weight: 500; opacity: .85; }
-  .row { display: flex; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 6px; font-size: 16px; line-height: 1.35; user-select: none; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 6px; font-size: 16px; line-height: 1.35; user-select: none; }
   .row .t { flex: 1; font-variant-numeric: tabular-nums; }
   .row .d { font-weight: 600; font-variant-numeric: tabular-nums; }
   .row .s { width: 26px; height: 26px; border-radius: 50%; background: #eee; color: #666;
@@ -49,6 +49,12 @@
   .row.armed .edit { display: inline-block; }
   .row.armed .edit + .del { margin-left: 6px; }
   .row .s.birth { background: #ece6f5; color: #5e4690; }
+  .row .cmt { flex-basis: 100%; font-size: 13px; line-height: 1.4; color: var(--muted); padding: 6px 0 0 38px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .row .cmt::before { content: '💬 '; }
+  #edit textarea { flex: 1; min-width: 0; min-height: 76px; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 16px; line-height: 1.4; background: var(--card); color: var(--ink); resize: vertical; }
+  #edit textarea:focus { outline: none; border-color: var(--accent); }
+  #edit .frow.top { align-items: flex-start; }
+  #edit .frow.top > label { padding-top: 12px; }
   .row.armed { border-color: var(--accent); }
   .empty { color: var(--muted); font-size: 15px; text-align: center; padding: 36px 12px; line-height: 1.5; }
 
@@ -203,7 +209,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v20</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v21</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -230,6 +236,7 @@
     <div class="frow" id="eEndRow"><label for="eEnd">Ende</label><input id="eEnd" type="datetime-local"></div>
     <div class="frow" id="eValRow"><label id="eValLbl" for="eVal">Menge</label><input id="eVal" type="text" inputmode="decimal" autocomplete="off"><span id="eUnit"></span></div>
     <div class="frow" id="eTextRow"><input id="eText" type="text" autocomplete="off"></div>
+    <div class="frow top" id="eCmtRow"><label for="eCmt">Kommentar</label><textarea id="eCmt" maxlength="500" placeholder="z.B. sehr unruhig, schläfrig, Bäuerchen"></textarea></div>
     <div class="ehint" id="eHint"></div>
     <div class="btns"><button id="eCancel">Abbrechen</button><button id="eSave" class="primary">Speichern</button></div>
   </div>
@@ -502,7 +509,8 @@
           if (prev && it.type !== 'fever') { const d = it.value - prev.value; delta = '<span class="sub">' + (d >= 0 ? '+' : '−') + (it.type === 'weight' ? fmtNum(Math.abs(d) * 1000, 0) + ' g' : fmtNum(Math.abs(d), 1) + ' cm') + '</span>'; }
           inner = '<span class="s ' + (it.type === 'fever' ? 'fever' : 'measure') + '">' + TYPE_BADGE[it.type] + '</span><span class="t">' + hhmm(it.start) + delta + '</span><span class="d">' + valueLabel(it) + '</span>';
         }
-        el.innerHTML = inner + '<button class="edit">Bearbeiten</button><button class="del">Löschen</button>';
+        el.innerHTML = inner + '<button class="edit">Bearbeiten</button><button class="del">Löschen</button>' +
+          (!NOTE_IS_TEXT[it.type] && it.note ? '<div class="cmt">' + escapeHtml(it.note) + '</div>' : '');
         el.addEventListener('click', e => {
           if (e.target.classList.contains('del')) { it.deleted = true; armed = null; save(); render(); return; }
           if (e.target.classList.contains('edit')) { openEdit(it); return; }
@@ -615,6 +623,7 @@
   const VALUE_UNIT = { feed: 'ml', weight: 'kg', height: 'cm', fever: '°C' };
   function paintSide() { for (const b of editBox.querySelectorAll('.seg button')) b.classList.toggle('on', b.dataset.s === editSide); }
   for (const b of editBox.querySelectorAll('.seg button')) b.addEventListener('click', () => { editSide = b.dataset.s; paintSide(); });
+  const NOTE_IS_TEXT = { med: 1, birth: 1 };   // for these the note is the entry itself; elsewhere it is a comment
   function openEdit(it, focus) {
     editIt = it;
     const feed = it.type === 'feed', running = feed && !it.end;
@@ -632,6 +641,7 @@
     $('eVal').value = typeof it.value === 'number' && isFinite(it.value) ? String(it.value).replace('.', ',') : '';
     $('eVal').placeholder = feed ? 'leer lassen, 0 = nichts' : '';
     $('eTextRow').hidden = !hasText; $('eText').value = it.note || '';
+    $('eCmtRow').hidden = hasText; $('eCmt').value = hasText ? '' : (it.note || '');
     $('eHint').textContent = '';
     editBox.classList.add('open'); history.pushState({ edit: 1 }, '');
     if (focus === 'value') setTimeout(() => $('eVal').focus(), 50);
@@ -669,6 +679,7 @@
       else { it.value = value; it.unit = feed ? 'ml' : it.type === 'fever' ? 'C' : VALUE_UNIT[it.type]; }
     }
     if (!$('eTextRow').hidden) it.note = note;
+    if (!$('eCmtRow').hidden) { const c = $('eCmt').value.trim().slice(0, 500); if (c) it.note = c; else delete it.note; }
     armed = null; save(); history.back(); syncButton(); render();
   }
   $('eCancel').addEventListener('pointerdown', e => { e.preventDefault(); history.back(); });

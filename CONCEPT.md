@@ -40,6 +40,10 @@ wischen", das fühlte sich unzuverlässig an). Der zuletzt offene Screen wird ge
 Gewicht, Größe, Fieber: Wert und Zeitpunkt. Notiz und Geburt: Text und Zeitpunkt. Windel und
 Husten: Zeitpunkt. Prüfungen: nichts in der Zukunft, Ende nach Beginn. Unveränderte Zeitfelder
 bleiben sekundengenau (das Feld zeigt nur Minuten).
+**Kommentar (seit v21)**: im Bearbeiten-Fenster ein Feld "Kommentar" (bis 500 Zeichen) für
+Stillen, Windel, Husten, Gewicht, Größe, Fieber. Er steht klein mit 💬 unter dem Eintrag, wird
+im Feld `note` gespeichert (vorhandene Spalte, synct mit, steht im CSV). Bei Notiz und Geburt
+ist `note` der Eintrag selbst, dort gibt es kein zweites Feld.
 **Zu spät gestartet**: während das Stillen läuft, steht neben "Verwerfen" der Knopf
 "Beginn ändern" (Seite und Beginn).
 **Menge beim Stillen (seit v19)**: nach dem Stopp erscheint über der Liste die Leiste
@@ -207,6 +211,7 @@ db = {
   dessen Einträge in die fremde Familie hochladen.
 - v19 (2026-10-23): Bearbeiten für alle Einträge, "Beginn ändern" beim laufenden Stillen, Menge in ml nach dem Stopp.
 - v20 (2026-10-23): Einladungs-Link fragt vor dem Beitreten; Code aus dem Link nur A-Z, 0-9, Bindestrich.
+- v21 (2026-10-23): Kommentar zu jedem Eintrag (Bearbeiten → Kommentar), sichtbar unter der Zeile.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.
