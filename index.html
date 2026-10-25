@@ -7,7 +7,7 @@
          node tools/csp-hash.js
      otherwise the browser refuses the script and the app stays blank (tools/hooks/pre-commit checks this).
      connect-src names the Supabase project from config.js; both change together. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-6ZF/RTh8UCu28NluBI3OtTMxRgrEWmPWS7dS9Zbw46E='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-nzi2dSjw3Z4FzO9e4+Q/NGb58fUi9w0Pqy5ddDMl0Jc='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e0607e">
 <link rel="manifest" href="manifest.json">
@@ -82,7 +82,19 @@
   #cancel.show, #fixStart.show { visibility: visible; }
   .runrow { display: flex; gap: 6px; justify-content: center; }
   #fixStart { height: 44px; padding: 0 18px; border: none; border-radius: 22px; background: transparent; color: var(--muted); font-size: 14px; visibility: hidden; }
-  #fixStart.gone { display: none; }
+  #fixStart.gone, #cancel.gone2 { display: none; }
+  #starts { gap: 10px; }
+  #starts .side { width: 108px; height: 108px; }
+  #starts .side .big { font-size: 23px; }
+  #startBottle { background: #6f9a4c; box-shadow: 0 10px 28px rgba(111,154,76,.4); }
+  #startBottle .big { font-size: 30px; }
+  #startFixAsk { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; margin: 0 0 14px; }
+  #startFixAsk[hidden] { display: none; }
+  #startFixAsk .q { font-size: 14px; font-weight: 600; margin-right: 4px; flex-basis: 100%; }
+  #startFixAsk button { height: 40px; min-width: 44px; padding: 0 12px; border: 1px solid var(--line); border-radius: 20px; background: var(--bg); color: var(--ink); font-size: 15px; }
+  #startFixAsk button.x { border: none; background: transparent; color: var(--muted); margin-left: auto; }
+  .row .s.bottle { background: #eaf2e3; color: #4c6b33; font-size: 13px; }
+  #entryChips button.on { background: var(--ink); color: #fff; border-color: var(--ink); }
   #amountAsk { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; margin: 0 0 14px; }
   #amountAsk[hidden] { display: none; }
   #amountAsk .q { font-size: 14px; font-weight: 600; margin-right: 4px; }
@@ -209,17 +221,19 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v21</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v22</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
   <div id="syncline"></div>
+  <div id="startFixAsk" hidden></div>
   <div id="amountAsk" hidden></div>
   <div id="list"></div>
   <div id="empty" class="empty" hidden></div>
   <div class="dock">
     <div id="starts">
       <button class="side" id="startL"><span class="big">Links</span><span class="lbl">Start</span></button>
+      <button class="side" id="startBottle"><span class="big">🍼</span><span class="lbl">Flasche</span></button>
       <button class="side" id="startR"><span class="big">Rechts</span><span class="lbl">Start</span></button>
     </div>
     <button id="big" hidden><span class="clock">00:00</span><span class="lbl">Stopp</span></button>
@@ -370,6 +384,7 @@
   const alive = () => db.events.filter(e => !e.deleted && e.child_id === db.active_child);
   const minMs = () => (Number(db.settings && db.settings.minSeconds) || 0) * 1000;
   const feeds = () => alive().filter(e => e.type === 'feed' && e.end && (e.end - e.start) >= minMs()).sort((a, b) => b.start - a.start);
+  const bottles = () => alive().filter(e => e.type === 'bottle').sort((a, b) => b.start - a.start);
   const runningFeed = () => alive().filter(e => e.type === 'feed' && !e.end).sort((a, b) => a.start - b.start)[0] || null;
   function addEvent(ev) {
     const now = Date.now();
@@ -411,7 +426,7 @@
   const SCREENS = [
     { key: 'birth', title: 'Geburt', types: ['birth'], empty: 'Noch nichts festgehalten.<br>Unten antippen, wenn etwas passiert. Die Uhrzeit wird gespeichert und lässt sich später korrigieren.',
       buttons: [{ t: 'birth', label: 'Ereignis', sub: 'festhalten', cls: 'plug', input: { text: true, time: true, chips: true, placeholder: 'Oder eigenes eintippen' } }] },
-    { key: 'feed', title: 'Stillen', types: ['feed'], empty: 'Noch kein Eintrag.<br>Unten tippen, wenn das Stillen beginnt.' },
+    { key: 'feed', title: 'Stillen', types: ['feed', 'bottle'], empty: 'Noch kein Eintrag.<br>Unten tippen, wenn das Stillen beginnt.' },
     { key: 'diaper', title: 'Windel', types: ['pee', 'poo'], empty: 'Noch keine Windel.<br>Unten tippen: Urin oder Stuhl.',
       buttons: [{ t: 'pee', label: 'Urin', cls: 'pee' }, { t: 'poo', label: 'Stuhl', cls: 'poo' }] },
     { key: 'weight', title: 'Gewicht', types: ['weight'], empty: 'Noch kein Gewicht.<br>Unten tippen und eintragen.',
@@ -422,7 +437,7 @@
       buttons: [{ t: 'fever', label: 'Fieber', cls: 'fever', input: { unit: '°C', placeholder: 'z.B. 38,4' } }, { t: 'cough', label: 'Husten', cls: 'cough' }, { t: 'med', label: 'Notiz', cls: 'note', input: { text: true, placeholder: 'z.B. Schnupfen, Zäpfchen' } }] },
     { key: 'dash', title: 'Übersicht', types: [], empty: '', buttons: [] }
   ];
-  const TYPE_LABEL = { birth: 'Geburt', pee: 'Urin', poo: 'Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', feed: 'Stillen' };
+  const TYPE_LABEL = { birth: 'Geburt', pee: 'Urin', poo: 'Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', feed: 'Stillen', bottle: 'Flasche' };
   const TYPE_BADGE = { pee: 'U', poo: 'S', weight: 'kg', height: 'cm', fever: '°', cough: 'H', med: '✎' };
   let screen = SCREENS.findIndex(x => x.key === localStorage.getItem('stillzeit.screen'));
   if (screen < 0) screen = SCREENS.findIndex(x => x.key === 'feed');
@@ -477,10 +492,11 @@
       const head = document.createElement('div'); head.className = 'dayhead';
       let right = '';
       if (sc.key === 'feed') {
-        const total = rows.reduce((a, r) => a + (r.end - r.start), 0);
+        const fr = rows.filter(r => r.type === 'feed'), br = rows.filter(r => r.type === 'bottle');
+        const total = fr.reduce((a, r) => a + (r.end - r.start), 0);
         const col = dayColor(rows.length); head.style.background = col.bg; head.style.color = col.fg;
         const withMl = rows.filter(r => typeof r.value === 'number' && isFinite(r.value));
-        right = '<span class="cnt">' + rows.length + ' mal</span> <span class="sum">· ' + durLabel(total) + ' gesamt' + (withMl.length ? ' · ' + fmtNum(withMl.reduce((a, r) => a + r.value, 0), 0) + ' ml' : '') + '</span>';
+        right = '<span class="cnt">' + fr.length + ' mal</span> <span class="sum">' + (br.length ? '· ' + br.length + (br.length === 1 ? ' Flasche ' : ' Flaschen ') : '') + (fr.length ? '· ' + durLabel(total) + ' gesamt' : '') + (withMl.length ? ' · ' + fmtNum(withMl.reduce((a, r) => a + r.value, 0), 0) + ' ml' : '') + '</span>';
       } else if (sc.key === 'diaper') {
         const u = rows.filter(r => r.type === 'pee').length, st = rows.filter(r => r.type === 'poo').length;
         const col = dayColor(rows.length, 40); head.style.background = col.bg; head.style.color = col.fg;
@@ -497,6 +513,8 @@
         if (it.type === 'feed') {
           const sd = sideOf(it.side);
           inner = '<span class="s ' + (sd || 'none') + '">' + sd + '</span><span class="t">' + hhmm(it.start) + ' – ' + hhmm(it.end) + '</span><span class="d">' + durLabel(it.end - it.start) + (typeof it.value === 'number' && isFinite(it.value) ? ' · ' + fmtNum(it.value, 0) + ' ml' : '') + '</span>';
+        } else if (it.type === 'bottle') {
+          inner = '<span class="s bottle">🍼</span><span class="t">' + hhmm(it.start) + '</span><span class="d">Flasche · ' + (typeof it.value === 'number' && isFinite(it.value) ? fmtNum(it.value, 0) + ' ml' : '?') + '</span>';
         } else if (it.type === 'pee' || it.type === 'poo' || it.type === 'cough') {
           inner = '<span class="s ' + it.type + '">' + TYPE_BADGE[it.type] + '</span><span class="t">' + hhmm(it.start) + '</span><span class="d">' + TYPE_LABEL[it.type] + '</span>';
         } else if (it.type === 'birth') {
@@ -525,14 +543,16 @@
     renderSince();
     renderSyncLine();
     renderAmountAsk();
+    renderStartFix();
   }
   const escapeHtml = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   function renderSince() {
     const el = $('since'), sc = cur(), run = runningFeed();
     const sideName = s => s === 'L' ? 'links' : s === 'R' ? 'rechts' : '';
     if (sc.key === 'feed') {
-      const last = feeds()[0];
+      const last = feeds()[0], lastB = bottles()[0];
       if (run) { el.innerHTML = 'Stillen läuft seit <b>' + hhmm(run.start) + '</b>' + (run.side ? ' · ' + sideName(run.side) : ''); return; }
+      if (lastB && (!last || lastB.start > last.end)) { el.innerHTML = 'Letzte Flasche <b>' + ago(Date.now() - lastB.start) + '</b>' + (typeof lastB.value === 'number' ? ' · ' + fmtNum(lastB.value, 0) + ' ml' : ''); return; }
       if (!last) { el.textContent = ''; return; }
       el.innerHTML = 'Letztes Stillen <b>' + ago(Date.now() - last.end) + '</b>' + (last.side ? ' · ' + sideName(last.side) : '');
       return;
@@ -547,7 +567,7 @@
   }
 
   // ---------- the dock: feed buttons or tap buttons per screen ----------
-  const big = $('big'), cancel = $('cancel'), starts = $('starts'), taps = $('taps'), fixStart = $('fixStart');
+  const big = $('big'), cancel = $('cancel'), starts = $('starts'), taps = $('taps'), fixStart = $('fixStart'), startBottle = $('startBottle');
   function syncButton() {
     const sc = cur(), run = runningFeed();
     if (tick) { clearInterval(tick); tick = null; }
@@ -568,6 +588,8 @@
     big.hidden = !run; starts.hidden = !!run;
     big.classList.remove('L', 'R'); if (run && sideOf(run.side)) big.classList.add(run.side);
     cancel.classList.toggle('show', !!run); fixStart.classList.toggle('show', !!run);
+    // idle: the bottle button sits where "Beginn ändern / Verwerfen" appear while a feed runs
+    fixStart.classList.toggle('gone', !run); cancel.classList.toggle('gone2', !run);
     if (run) {
       const upd = () => { big.querySelector('.clock').textContent = clock(Date.now() - run.start); };
       upd(); big.querySelector('.lbl').textContent = 'Stopp' + (run.side === 'L' ? ' · links' : run.side === 'R' ? ' · rechts' : '');
@@ -583,8 +605,9 @@
   function startFeed(side) {
     if (runningFeed()) return;
     askAmountFor = null;
-    addEvent({ type: 'feed', start: Date.now(), side });
-    syncButton();
+    const ev = addEvent({ type: 'feed', start: Date.now(), side });
+    startFixFor = ev.id; startFixBase = ev.start;
+    syncButton(); render();
   }
   $('startL').addEventListener('click', () => startFeed('L'));
   $('startR').addEventListener('click', () => startFeed('R'));
@@ -592,11 +615,35 @@
     const run = runningFeed();
     if (!run) { syncButton(); return; }
     run.end = Date.now();
+    startFixFor = null;
     askAmountFor = run.id;   // offer the amount right after stopping; it is optional
     armed = null; save();
     syncButton(); render();
   });
   fixStart.addEventListener('click', () => { const run = runningFeed(); if (run) openEdit(run); });
+
+  // ---------- started late: shift the start back with one tap, right after starting ----------
+  let startFixFor = null, startFixBase = 0;
+  const EARLIER = [2, 5, 10, 15];
+  function renderStartFix() {
+    const box = $('startFixAsk'), run = runningFeed();
+    if (!run || run.id !== startFixFor || cur().key !== 'feed') { box.hidden = true; box.innerHTML = ''; return; }
+    box.hidden = false; box.innerHTML = '<span class="q">Schon früher angefangen?</span>';
+    for (const n of EARLIER) {
+      const b = document.createElement('button'); b.textContent = 'vor ' + n + ' min';
+      b.addEventListener('click', () => { run.start = startFixBase - n * 60000; startFixFor = null; save(); syncButton(); render(); });
+      box.appendChild(b);
+    }
+    const other = document.createElement('button'); other.textContent = 'Andere';
+    other.addEventListener('click', () => { startFixFor = null; render(); openEdit(run); });
+    const x = document.createElement('button'); x.className = 'x'; x.textContent = '✕'; x.setAttribute('aria-label', 'Passt so');
+    x.addEventListener('click', () => { startFixFor = null; render(); });
+    box.appendChild(other); box.appendChild(x);
+  }
+
+  // ---------- bottle: amount in ml plus time, no timer ----------
+  const BOTTLE = { t: 'bottle', label: 'Flasche', input: { unit: 'ml', placeholder: 'z.B. 90', time: true, zeroOk: true, amounts: [30, 60, 90, 120, 150] } };
+  startBottle.addEventListener('click', () => openEntry(BOTTLE));
 
   // ---------- amount after a feed: one tap, optional, can be added later via Bearbeiten ----------
   let askAmountFor = null;
@@ -620,14 +667,14 @@
 
   // ---------- edit any entry: side, start, end, amount for feeds; value or text plus time for the rest ----------
   const editBox = $('edit'); let editIt = null, editSide = '';
-  const VALUE_UNIT = { feed: 'ml', weight: 'kg', height: 'cm', fever: '°C' };
+  const VALUE_UNIT = { feed: 'ml', bottle: 'ml', weight: 'kg', height: 'cm', fever: '°C' };
   function paintSide() { for (const b of editBox.querySelectorAll('.seg button')) b.classList.toggle('on', b.dataset.s === editSide); }
   for (const b of editBox.querySelectorAll('.seg button')) b.addEventListener('click', () => { editSide = b.dataset.s; paintSide(); });
   const NOTE_IS_TEXT = { med: 1, birth: 1 };   // for these the note is the entry itself; elsewhere it is a comment
   function openEdit(it, focus) {
     editIt = it;
     const feed = it.type === 'feed', running = feed && !it.end;
-    const hasVal = (feed && !running) || it.type === 'weight' || it.type === 'height' || it.type === 'fever';
+    const hasVal = (feed && !running) || it.type === 'bottle' || it.type === 'weight' || it.type === 'height' || it.type === 'fever';
     const hasText = it.type === 'med' || it.type === 'birth';
     $('editTitle').textContent = running ? 'Laufendes Stillen' : (TYPE_LABEL[it.type] || 'Eintrag') + ' bearbeiten';
     $('eSideRow').hidden = !feed; editSide = sideOf(it.side); paintSide();
@@ -636,7 +683,7 @@
     $('eEndRow').hidden = !feed || running;
     $('eEnd').value = it.end ? toLocalInput(it.end) : ''; $('eEnd').max = toLocalInput(Date.now() + 60000);
     $('eValRow').hidden = !hasVal;
-    $('eValLbl').textContent = feed ? 'Menge' : it.type === 'fever' ? 'Fieber' : TYPE_LABEL[it.type];
+    $('eValLbl').textContent = feed || it.type === 'bottle' ? 'Menge' : it.type === 'fever' ? 'Fieber' : TYPE_LABEL[it.type];
     $('eUnit').textContent = VALUE_UNIT[it.type] || '';
     $('eVal').value = typeof it.value === 'number' && isFinite(it.value) ? String(it.value).replace('.', ',') : '';
     $('eVal').placeholder = feed ? 'leer lassen, 0 = nichts' : '';
@@ -665,7 +712,8 @@
       if (raw === '' && feed) clearValue = true;
       else {
         const v = Number(raw.replace(',', '.'));
-        if (raw === '' || !isFinite(v) || v < 0 || (!feed && v === 0)) return hint(feed ? 'Menge als Zahl in ml, 0 ist erlaubt.' : 'Bitte einen Wert eingeben.');
+        const ml = feed || it.type === 'bottle';
+        if (raw === '' || !isFinite(v) || v < 0 || (!ml && v === 0)) return hint(ml ? 'Menge als Zahl in ml, 0 ist erlaubt.' : 'Bitte einen Wert eingeben.');
         value = v;
       }
     }
@@ -751,9 +799,11 @@
       const f = feeds(); const m = byDay(f, N); const tf = m.get(today) || [];
       const w7 = days.slice(-7).map(d => m.get(d.key)); const avgN = w7.reduce((a, r) => a + r.length, 0) / 7; const avgM = w7.reduce((a, r) => a + r.reduce((x, e) => x + (e.end - e.start), 0), 0) / 7;
       const stacks = days.map(d => { const r = m.get(d.key); return [{ v: r.filter(e => e.side === 'L').reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.L }, { v: r.filter(e => e.side === 'R').reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.R }, { v: r.filter(e => !sideOf(e.side)).reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.feed }]; });
-      const tfMl = tf.filter(e => typeof e.value === 'number' && isFinite(e.value));
-      cards.push({ key: 'feed', title: 'Stillen', sum: 'Heute ' + tf.length + ' mal · ' + durLabel(tf.reduce((a, e) => a + (e.end - e.start), 0)) + (tfMl.length ? ' · ' + fmtNum(tfMl.reduce((a, e) => a + e.value, 0), 0) + ' ml' : '') + '<br>Ø letzte 7 Tage: ' + fmtNum(avgN, 1) + ' mal · ' + durLabel(avgM) + ' pro Tag',
-        chart: f.length ? legend([{ c: C.L, l: 'links' }, { c: C.R, l: 'rechts' }]) + svgBars(days, stacks, { fmt: v => v + ' min', labels: (st, i) => m.get(days[i].key).length + '×' }) + '<div class="cap">Minuten pro Tag, letzte 14 Tage. Die Zahl über dem Balken ist die Anzahl.</div>' : '<div class="cap">Noch keine Daten.</div>' });
+      const bAll = bottles(), bm = byDay(bAll, N), tb = bm.get(today) || [];
+      const tfMl = tf.concat(tb).filter(e => typeof e.value === 'number' && isFinite(e.value));
+      const bottleChart = bAll.length ? '<div style="height:12px"></div>' + legend([{ c: '#6f9a4c', l: 'Flasche' }]) + svgBars(days, days.map(d => [{ v: bm.get(d.key).reduce((a, e) => a + (typeof e.value === 'number' ? e.value : 0), 0), color: '#6f9a4c' }]), { fmt: v => v + ' ml', labels: (st, i) => bm.get(days[i].key).length + '×' }) + '<div class="cap">Flasche: ml pro Tag, die Zahl über dem Balken ist die Anzahl.</div>' : '';
+      cards.push({ key: 'feed', title: 'Stillen', sum: 'Heute ' + tf.length + ' mal · ' + durLabel(tf.reduce((a, e) => a + (e.end - e.start), 0)) + (tb.length ? ' · ' + tb.length + (tb.length === 1 ? ' Flasche' : ' Flaschen') : '') + (tfMl.length ? ' · ' + fmtNum(tfMl.reduce((a, e) => a + e.value, 0), 0) + ' ml' : '') + '<br>Ø letzte 7 Tage: ' + fmtNum(avgN, 1) + ' mal · ' + durLabel(avgM) + ' pro Tag',
+        chart: f.length ? legend([{ c: C.L, l: 'links' }, { c: C.R, l: 'rechts' }]) + svgBars(days, stacks, { fmt: v => v + ' min', labels: (st, i) => m.get(days[i].key).length + '×' }) + '<div class="cap">Minuten pro Tag, letzte 14 Tage. Die Zahl über dem Balken ist die Anzahl.</div>' + bottleChart : (bottleChart || '<div class="cap">Noch keine Daten.</div>') });
     }
     // Windel
     {
@@ -803,7 +853,7 @@
   }
 
   // ---------- value entry (weight, height, fever, note) ----------
-  const entry = $('entry'); let entryBtn = null;
+  const entry = $('entry'); let entryBtn = null, entryOpenedAt = 0;
   function openEntry(b) {
     entryBtn = b;
     const inp = $('entryVal'), I = b.input;
@@ -813,9 +863,17 @@
     inp.type = 'text'; inp.inputMode = I.text ? 'text' : 'decimal';
     $('entryUnit').textContent = I.text || I.timeOnly ? '' : I.unit;
     $('entryTimeRow').hidden = !I.time;
-    $('entryTime').value = toLocalInput(b.edit ? b.edit.start : Date.now());
+    entryOpenedAt = b.edit ? b.edit.start : Date.now();
+    $('entryTime').value = toLocalInput(entryOpenedAt);
     $('entryTime').max = toLocalInput(Date.now() + 60000);
     const chips = $('entryChips'); chips.innerHTML = '';
+    if (I.amounts) {
+      for (const n of I.amounts) {
+        const c = document.createElement('button'); c.textContent = n + ' ml';
+        c.addEventListener('click', () => { inp.value = String(n); for (const o of chips.children) o.classList.toggle('on', o === c); });
+        chips.appendChild(c);
+      }
+    }
     if (I.chips) {
       const own = ownBirthLabels();
       for (const label of own.concat(BIRTH_PRESETS)) {
@@ -836,10 +894,11 @@
     const b = entryBtn; if (!b) return;
     const I = b.input, raw = $('entryVal').value.trim();
     let when = Date.now();
-    if (I.time) { const t = new Date($('entryTime').value).getTime(); if (isFinite(t)) when = Math.min(t, Date.now()); }
+    // an untouched time field means "now" to the second; the field itself only knows minutes
+    if (I.time && $('entryTime').value !== toLocalInput(entryOpenedAt)) { const t = new Date($('entryTime').value).getTime(); if (isFinite(t)) when = Math.min(t, Date.now()); }
     if (I.timeOnly) { b.edit.start = when; save(); }
     else if (I.text) { if (!raw) return; addEvent({ type: b.t, start: when, note: raw }); }
-    else { const v = Number(raw.replace(',', '.')); if (!raw || !isFinite(v) || v <= 0) return; addEvent({ type: b.t, start: when, value: v, unit: I.unit === '°C' ? 'C' : I.unit }); }
+    else { const v = Number(raw.replace(',', '.')); if (!raw || !isFinite(v) || v < 0 || (v === 0 && !I.zeroOk)) return; addEvent({ type: b.t, start: when, value: v, unit: I.unit === '°C' ? 'C' : I.unit }); }
     armed = null; history.back(); render();
   }
   window.addEventListener('popstate', closeEntry);

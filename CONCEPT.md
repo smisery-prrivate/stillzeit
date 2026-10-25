@@ -44,6 +44,17 @@ bleiben sekundengenau (das Feld zeigt nur Minuten).
 Stillen, Windel, Husten, Gewicht, Größe, Fieber. Er steht klein mit 💬 unter dem Eintrag, wird
 im Feld `note` gespeichert (vorhandene Spalte, synct mit, steht im CSV). Bei Notiz und Geburt
 ist `note` der Eintrag selbst, dort gibt es kein zweites Feld.
+**Beim Start korrigieren (seit v22)**: direkt nach dem Start erscheint über der Liste
+"Schon früher angefangen? vor 2 · 5 · 10 · 15 min · Andere · ✕". Ein Tipp verlegt den Beginn
+zurück (gerechnet vom Moment des Starts), "Andere" öffnet das Bearbeiten-Fenster. Die Leiste
+verschwindet nach einer Wahl, mit ✕ oder beim Stopp.
+**Flasche (seit v22)**: drei runde Knöpfe in einer Reihe: Links · 🍼 Flasche · Rechts
+(Pat wollte alle drei auf einer Linie; Flasche in der Mitte, damit links/rechts auf ihrer Seite
+bleiben). Öffnet Menge (30/60/90/120/150 ml antippen oder eintippen,
+0 erlaubt) und Zeitpunkt. Typ `bottle`, `value` + `unit: 'ml'`, kein Timer. Steht in der
+Stillen-Liste mit 🍼, zählt im Tageskopf ("4 mal · 2 Flaschen · 1 h gesamt · 180 ml"), in
+"Letzte Flasche vor …" und in der Übersicht (Summe heute, eigene Grafik ml pro Tag).
+Bearbeiten: Menge, Zeitpunkt, Kommentar. Kein Schema-Update nötig (type ist freier Text).
 **Zu spät gestartet**: während das Stillen läuft, steht neben "Verwerfen" der Knopf
 "Beginn ändern" (Seite und Beginn).
 **Menge beim Stillen (seit v19)**: nach dem Stopp erscheint über der Liste die Leiste
@@ -212,6 +223,7 @@ db = {
 - v19 (2026-10-23): Bearbeiten für alle Einträge, "Beginn ändern" beim laufenden Stillen, Menge in ml nach dem Stopp.
 - v20 (2026-10-23): Einladungs-Link fragt vor dem Beitreten; Code aus dem Link nur A-Z, 0-9, Bindestrich.
 - v21 (2026-10-23): Kommentar zu jedem Eintrag (Bearbeiten → Kommentar), sichtbar unter der Zeile.
+- v22 (2026-10-25): "Schon früher angefangen?" direkt nach dem Start; Flasche mit Menge.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.
