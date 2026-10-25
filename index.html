@@ -7,7 +7,7 @@
          node tools/csp-hash.js
      otherwise the browser refuses the script and the app stays blank (tools/hooks/pre-commit checks this).
      connect-src names the Supabase project from config.js; both change together. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-nzi2dSjw3Z4FzO9e4+Q/NGb58fUi9w0Pqy5ddDMl0Jc='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-+rfXT5ipaFIZo/Mo5vjIL2/DQ/mgj/I8jEvjhVzXkl0='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e0607e">
 <link rel="manifest" href="manifest.json">
@@ -19,7 +19,7 @@
   * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body { height: 100%; overscroll-behavior-y: none; }
   body { background: var(--bg); color: var(--ink); font-family: -apple-system, "Segoe UI", Roboto, sans-serif; display: flex; justify-content: center; }
-  #app { width: 100%; max-width: 480px; min-height: 100%; padding: max(env(safe-area-inset-top), 16px) 16px 300px; }
+  #app { width: 100%; max-width: 480px; min-height: 100%; padding: max(env(safe-area-inset-top), 16px) 16px 340px; }
   header { display: flex; align-items: center; justify-content: space-between; padding: 8px 4px 4px; }
   h1 { font-size: 20px; font-weight: 700; }
   .version { font-size: 11px; color: #d6c9cd; }
@@ -60,7 +60,26 @@
 
   /* big button in the thumb zone */
   .dock { position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; width: 100%; max-width: 480px; padding: 12px 16px calc(env(safe-area-inset-bottom) + 20px); z-index: 4; display: flex; flex-direction: column; align-items: center; gap: 10px; background: linear-gradient(to top, var(--bg) 78%, rgba(251,246,243,0)); }
-  #starts { display: flex; gap: 14px; }
+  #starts { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+  #starts .srow { display: flex; gap: 16px; justify-content: center; }
+  #starts .srow2 { display: flex; gap: 10px; width: 100%; max-width: 330px; }
+  .mini { flex: 1; height: 54px; border: none; border-radius: 27px; color: #fff; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+  .mini:active { transform: scale(.97); }
+  .mini .ic { font-size: 20px; }
+  #startBottle { background: #6f9a4c; box-shadow: 0 8px 20px rgba(111,154,76,.35); }
+  #startPump { background: #b0638a; box-shadow: 0 8px 20px rgba(176,99,138,.35); }
+  #filterBar { display: flex; gap: 6px; margin: 0 0 12px; }
+  #filterBar[hidden] { display: none; }
+  #filterBar button { flex: 1 1 auto; min-width: 0; justify-content: center; white-space: nowrap; height: 38px; padding: 0 8px; border: 1px solid var(--line); border-radius: 19px; background: var(--card); color: var(--ink); font-size: 13.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+  #filterBar button .dot { flex: none; width: 9px; height: 9px; border-radius: 50%; }
+  .dayhead { gap: 10px; }
+  .dayhead > span:last-child { text-align: right; }
+  #filterBar button.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .row .s.pump { background: #f6e6ef; color: #8a3f66; font-size: 11px; }
+  #edit .seg button[hidden] { display: none; }
+  #edit .seg button.on[data-s=B] { background: #b0638a; border-color: #b0638a; color: #fff; }
+  #eChips { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+  #eChips button { display: inline-block; width: auto; margin: 0; text-align: center; height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: 19px; background: var(--bg); color: var(--ink); font-size: 14px; }
   #starts[hidden] { display: none; }
   .side { width: 150px; height: 150px; border-radius: 50%; border: none; color: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
   .side:active { transform: scale(.97); }
@@ -83,11 +102,8 @@
   .runrow { display: flex; gap: 6px; justify-content: center; }
   #fixStart { height: 44px; padding: 0 18px; border: none; border-radius: 22px; background: transparent; color: var(--muted); font-size: 14px; visibility: hidden; }
   #fixStart.gone, #cancel.gone2 { display: none; }
-  #starts { gap: 10px; }
-  #starts .side { width: 108px; height: 108px; }
-  #starts .side .big { font-size: 23px; }
-  #startBottle { background: #6f9a4c; box-shadow: 0 10px 28px rgba(111,154,76,.4); }
-  #startBottle .big { font-size: 30px; }
+  #starts .side { width: 132px; height: 132px; }
+  #starts .side .big { font-size: 28px; }
   #startFixAsk { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; margin: 0 0 14px; }
   #startFixAsk[hidden] { display: none; }
   #startFixAsk .q { font-size: 14px; font-weight: 600; margin-right: 4px; flex-basis: 100%; }
@@ -221,20 +237,26 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v22</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v23</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
   <div id="syncline"></div>
   <div id="startFixAsk" hidden></div>
   <div id="amountAsk" hidden></div>
+  <div id="filterBar" hidden></div>
   <div id="list"></div>
   <div id="empty" class="empty" hidden></div>
   <div class="dock">
     <div id="starts">
-      <button class="side" id="startL"><span class="big">Links</span><span class="lbl">Start</span></button>
-      <button class="side" id="startBottle"><span class="big">🍼</span><span class="lbl">Flasche</span></button>
-      <button class="side" id="startR"><span class="big">Rechts</span><span class="lbl">Start</span></button>
+      <div class="srow">
+        <button class="side" id="startL"><span class="big">Links</span><span class="lbl">Start</span></button>
+        <button class="side" id="startR"><span class="big">Rechts</span><span class="lbl">Start</span></button>
+      </div>
+      <div class="srow2">
+        <button class="mini" id="startBottle"><span class="ic">🍼</span>Flasche</button>
+        <button class="mini" id="startPump"><span class="ic">💧</span>Abpumpen</button>
+      </div>
     </div>
     <button id="big" hidden><span class="clock">00:00</span><span class="lbl">Stopp</span></button>
     <div id="taps" hidden></div>
@@ -245,11 +267,12 @@
 <div id="edit">
   <div class="panel">
     <h2 id="editTitle">Bearbeiten</h2>
-    <div class="frow" id="eSideRow"><label>Seite</label><div class="seg"><button data-s="L">Links</button><button data-s="R">Rechts</button></div></div>
+    <div class="frow" id="eSideRow"><label>Seite</label><div class="seg"><button data-s="L">Links</button><button data-s="R">Rechts</button><button data-s="B">Beide</button></div></div>
     <div class="frow" id="eStartRow"><label id="eStartLbl" for="eStart">Beginn</label><input id="eStart" type="datetime-local"></div>
     <div class="frow" id="eEndRow"><label for="eEnd">Ende</label><input id="eEnd" type="datetime-local"></div>
     <div class="frow" id="eValRow"><label id="eValLbl" for="eVal">Menge</label><input id="eVal" type="text" inputmode="decimal" autocomplete="off"><span id="eUnit"></span></div>
     <div class="frow" id="eTextRow"><input id="eText" type="text" autocomplete="off"></div>
+    <div class="frow" id="eChipsRow"><label></label><div id="eChips"></div></div>
     <div class="frow top" id="eCmtRow"><label for="eCmt">Kommentar</label><textarea id="eCmt" maxlength="500" placeholder="z.B. sehr unruhig, schläfrig, Bäuerchen"></textarea></div>
     <div class="ehint" id="eHint"></div>
     <div class="btns"><button id="eCancel">Abbrechen</button><button id="eSave" class="primary">Speichern</button></div>
@@ -426,7 +449,7 @@
   const SCREENS = [
     { key: 'birth', title: 'Geburt', types: ['birth'], empty: 'Noch nichts festgehalten.<br>Unten antippen, wenn etwas passiert. Die Uhrzeit wird gespeichert und lässt sich später korrigieren.',
       buttons: [{ t: 'birth', label: 'Ereignis', sub: 'festhalten', cls: 'plug', input: { text: true, time: true, chips: true, placeholder: 'Oder eigenes eintippen' } }] },
-    { key: 'feed', title: 'Stillen', types: ['feed', 'bottle'], empty: 'Noch kein Eintrag.<br>Unten tippen, wenn das Stillen beginnt.' },
+    { key: 'feed', title: 'Stillen', types: ['feed', 'bottle', 'pump'], empty: 'Noch kein Eintrag.<br>Unten tippen, wenn das Stillen beginnt.' },
     { key: 'diaper', title: 'Windel', types: ['pee', 'poo'], empty: 'Noch keine Windel.<br>Unten tippen: Urin oder Stuhl.',
       buttons: [{ t: 'pee', label: 'Urin', cls: 'pee' }, { t: 'poo', label: 'Stuhl', cls: 'poo' }] },
     { key: 'weight', title: 'Gewicht', types: ['weight'], empty: 'Noch kein Gewicht.<br>Unten tippen und eintragen.',
@@ -437,7 +460,7 @@
       buttons: [{ t: 'fever', label: 'Fieber', cls: 'fever', input: { unit: '°C', placeholder: 'z.B. 38,4' } }, { t: 'cough', label: 'Husten', cls: 'cough' }, { t: 'med', label: 'Notiz', cls: 'note', input: { text: true, placeholder: 'z.B. Schnupfen, Zäpfchen' } }] },
     { key: 'dash', title: 'Übersicht', types: [], empty: '', buttons: [] }
   ];
-  const TYPE_LABEL = { birth: 'Geburt', pee: 'Urin', poo: 'Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', feed: 'Stillen', bottle: 'Flasche' };
+  const TYPE_LABEL = { birth: 'Geburt', pee: 'Urin', poo: 'Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', feed: 'Stillen', bottle: 'Flasche', pump: 'Abpumpen' };
   const TYPE_BADGE = { pee: 'U', poo: 'S', weight: 'kg', height: 'cm', fever: '°', cough: 'H', med: '✎' };
   let screen = SCREENS.findIndex(x => x.key === localStorage.getItem('stillzeit.screen'));
   if (screen < 0) screen = SCREENS.findIndex(x => x.key === 'feed');
@@ -484,7 +507,10 @@
     const list = $('list');
     list.innerHTML = '';
     if (sc.key === 'dash') { renderDash(list); $('empty').hidden = true; renderSince(); renderSyncLine(); return; }
-    const rows0 = ofScreen(sc);
+    const fbar = $('filterBar'); fbar.hidden = sc.key !== 'feed';
+    if (sc.key === 'feed') renderFilter(fbar);
+    const flt = sc.key === 'feed' ? FILTERS.find(f => f.k === feedFilter) || FILTERS[0] : null;
+    const rows0 = ofScreen(sc).filter(e => !flt || !flt.types || flt.types.includes(e.type));
     const groups = new Map();
     for (const it of rows0) { const k = dayKey(it.start); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(it); }
     for (const [k, rows] of groups) {
@@ -492,11 +518,17 @@
       const head = document.createElement('div'); head.className = 'dayhead';
       let right = '';
       if (sc.key === 'feed') {
-        const fr = rows.filter(r => r.type === 'feed'), br = rows.filter(r => r.type === 'bottle');
+        const fr = rows.filter(r => r.type === 'feed'), br = rows.filter(r => r.type === 'bottle'), pr = rows.filter(r => r.type === 'pump');
         const total = fr.reduce((a, r) => a + (r.end - r.start), 0);
-        const col = dayColor(rows.length); head.style.background = col.bg; head.style.color = col.fg;
-        const withMl = rows.filter(r => typeof r.value === 'number' && isFinite(r.value));
-        right = '<span class="cnt">' + fr.length + ' mal</span> <span class="sum">' + (br.length ? '· ' + br.length + (br.length === 1 ? ' Flasche ' : ' Flaschen ') : '') + (fr.length ? '· ' + durLabel(total) + ' gesamt' : '') + (withMl.length ? ' · ' + fmtNum(withMl.reduce((a, r) => a + r.value, 0), 0) + ' ml' : '') + '</span>';
+        const col = dayColor(fr.length + br.length); head.style.background = col.bg; head.style.color = col.fg;
+        const mlOf = a => a.filter(r => typeof r.value === 'number' && isFinite(r.value));
+        const drank = mlOf(fr.concat(br)), pumped = mlOf(pr);
+        const parts = [];
+        if (br.length) parts.push(br.length + (br.length === 1 ? ' Flasche' : ' Flaschen'));
+        if (fr.length) parts.push(durLabel(total) + ' gesamt');
+        if (drank.length) parts.push(fmtNum(drank.reduce((a, r) => a + r.value, 0), 0) + ' ml');
+        if (pr.length) parts.push('abgepumpt ' + (pumped.length ? fmtNum(pumped.reduce((a, r) => a + r.value, 0), 0) + ' ml' : pr.length + '×'));
+        right = (fr.length ? '<span class="cnt">' + fr.length + ' mal</span> ' : '') + '<span class="sum">' + (fr.length && parts.length ? '· ' : '') + parts.join(' · ') + '</span>';
       } else if (sc.key === 'diaper') {
         const u = rows.filter(r => r.type === 'pee').length, st = rows.filter(r => r.type === 'poo').length;
         const col = dayColor(rows.length, 40); head.style.background = col.bg; head.style.color = col.fg;
@@ -513,6 +545,9 @@
         if (it.type === 'feed') {
           const sd = sideOf(it.side);
           inner = '<span class="s ' + (sd || 'none') + '">' + sd + '</span><span class="t">' + hhmm(it.start) + ' – ' + hhmm(it.end) + '</span><span class="d">' + durLabel(it.end - it.start) + (typeof it.value === 'number' && isFinite(it.value) ? ' · ' + fmtNum(it.value, 0) + ' ml' : '') + '</span>';
+        } else if (it.type === 'pump') {
+          const sd = sideOf(it.side);
+          inner = '<span class="s pump">' + (sd || 'LR') + '</span><span class="t">' + hhmm(it.start) + '</span><span class="d">abgepumpt · ' + (typeof it.value === 'number' && isFinite(it.value) ? fmtNum(it.value, 0) + ' ml' : '?') + '</span>';
         } else if (it.type === 'bottle') {
           inner = '<span class="s bottle">🍼</span><span class="t">' + hhmm(it.start) + '</span><span class="d">Flasche · ' + (typeof it.value === 'number' && isFinite(it.value) ? fmtNum(it.value, 0) + ' ml' : '?') + '</span>';
         } else if (it.type === 'pee' || it.type === 'poo' || it.type === 'cough') {
@@ -538,12 +573,25 @@
       }
       list.appendChild(wrap);
     }
-    $('empty').innerHTML = sc.empty;
+    $('empty').innerHTML = flt && flt.types && ofScreen(sc).length ? 'Keine Einträge für „' + flt.l + '“.' : sc.empty;
     $('empty').hidden = rows0.length > 0;
     renderSince();
     renderSyncLine();
     renderAmountAsk();
     renderStartFix();
+  }
+  const FILTERS = [{ k: 'all', l: 'Alle' }, { k: 'breast', l: 'Brust', types: ['feed'], dot: 'linear-gradient(90deg, var(--L) 50%, var(--R) 50%)' },
+    { k: 'bottle', l: 'Flasche', types: ['bottle'], dot: '#6f9a4c' }, { k: 'pump', l: 'Abpumpen', types: ['pump'], dot: '#b0638a' }];
+  let feedFilter = localStorage.getItem('stillzeit.filter') || 'all';
+  function renderFilter(bar) {
+    bar.innerHTML = '';
+    for (const f of FILTERS) {
+      const b = document.createElement('button'); b.className = f.k === feedFilter ? 'on' : ''; b.dataset.f = f.k;
+      if (f.dot) { const d = document.createElement('span'); d.className = 'dot'; d.style.background = f.dot; b.appendChild(d); }
+      b.appendChild(document.createTextNode(f.l));
+      b.addEventListener('click', () => { feedFilter = f.k; try { localStorage.setItem('stillzeit.filter', f.k); } catch (e) {} armed = null; render(); });
+      bar.appendChild(b);
+    }
   }
   const escapeHtml = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   function renderSince() {
@@ -644,6 +692,7 @@
   // ---------- bottle: amount in ml plus time, no timer ----------
   const BOTTLE = { t: 'bottle', label: 'Flasche', input: { unit: 'ml', placeholder: 'z.B. 90', time: true, zeroOk: true, amounts: [30, 60, 90, 120, 150] } };
   startBottle.addEventListener('click', () => openEntry(BOTTLE));
+  $('startPump').addEventListener('click', () => openEdit({ type: 'pump', start: Date.now() }, 'value', true));
 
   // ---------- amount after a feed: one tap, optional, can be added later via Bearbeiten ----------
   let askAmountFor = null;
@@ -667,33 +716,44 @@
 
   // ---------- edit any entry: side, start, end, amount for feeds; value or text plus time for the rest ----------
   const editBox = $('edit'); let editIt = null, editSide = '';
-  const VALUE_UNIT = { feed: 'ml', bottle: 'ml', weight: 'kg', height: 'cm', fever: '°C' };
+  const VALUE_UNIT = { feed: 'ml', bottle: 'ml', pump: 'ml', weight: 'kg', height: 'cm', fever: '°C' };
   function paintSide() { for (const b of editBox.querySelectorAll('.seg button')) b.classList.toggle('on', b.dataset.s === editSide); }
   for (const b of editBox.querySelectorAll('.seg button')) b.addEventListener('click', () => { editSide = b.dataset.s; paintSide(); });
   const NOTE_IS_TEXT = { med: 1, birth: 1 };   // for these the note is the entry itself; elsewhere it is a comment
-  function openEdit(it, focus) {
-    editIt = it;
-    const feed = it.type === 'feed', running = feed && !it.end;
-    const hasVal = (feed && !running) || it.type === 'bottle' || it.type === 'weight' || it.type === 'height' || it.type === 'fever';
+  const CHIP_AMOUNTS = { pump: [10, 20, 40, 60, 80, 100, 120], bottle: [30, 60, 90, 120, 150] };
+  let editIsNew = false;
+  function openEdit(it, focus, isNew) {
+    editIt = it; editIsNew = !!isNew;
+    const feed = it.type === 'feed', running = feed && !it.end, pump = it.type === 'pump';
+    const hasVal = (feed && !running) || it.type === 'bottle' || pump || it.type === 'weight' || it.type === 'height' || it.type === 'fever';
     const hasText = it.type === 'med' || it.type === 'birth';
-    $('editTitle').textContent = running ? 'Laufendes Stillen' : (TYPE_LABEL[it.type] || 'Eintrag') + ' bearbeiten';
-    $('eSideRow').hidden = !feed; editSide = sideOf(it.side); paintSide();
+    $('editTitle').textContent = running ? 'Laufendes Stillen' : isNew ? (TYPE_LABEL[it.type] || 'Eintrag') : (TYPE_LABEL[it.type] || 'Eintrag') + ' bearbeiten';
+    $('eSideRow').hidden = !feed && !pump; editBox.querySelector('.seg button[data-s=B]').hidden = !pump;
+    editSide = sideOf(it.side) || (pump ? 'B' : ''); paintSide();
+    const chipBox = $('eChips'); chipBox.innerHTML = '';
+    $('eChipsRow').hidden = !CHIP_AMOUNTS[it.type];
+    for (const n of CHIP_AMOUNTS[it.type] || []) {
+      const c = document.createElement('button'); c.textContent = n + ' ml';
+      c.addEventListener('click', () => { $('eVal').value = String(n); });
+      chipBox.appendChild(c);
+    }
     $('eStartLbl').textContent = feed ? 'Beginn' : 'Zeitpunkt';
     $('eStart').value = toLocalInput(it.start); $('eStart').max = toLocalInput(Date.now() + 60000);
     $('eEndRow').hidden = !feed || running;
     $('eEnd').value = it.end ? toLocalInput(it.end) : ''; $('eEnd').max = toLocalInput(Date.now() + 60000);
     $('eValRow').hidden = !hasVal;
-    $('eValLbl').textContent = feed || it.type === 'bottle' ? 'Menge' : it.type === 'fever' ? 'Fieber' : TYPE_LABEL[it.type];
+    $('eValLbl').textContent = feed || it.type === 'bottle' || pump ? 'Menge' : it.type === 'fever' ? 'Fieber' : TYPE_LABEL[it.type];
     $('eUnit').textContent = VALUE_UNIT[it.type] || '';
     $('eVal').value = typeof it.value === 'number' && isFinite(it.value) ? String(it.value).replace('.', ',') : '';
     $('eVal').placeholder = feed ? 'leer lassen, 0 = nichts' : '';
     $('eTextRow').hidden = !hasText; $('eText').value = it.note || '';
     $('eCmtRow').hidden = hasText; $('eCmt').value = hasText ? '' : (it.note || '');
+    $('eCmt').placeholder = pump ? 'z.B. Handpumpe, eingefroren' : 'z.B. sehr unruhig, schläfrig, Bäuerchen';
     $('eHint').textContent = '';
     editBox.classList.add('open'); history.pushState({ edit: 1 }, '');
     if (focus === 'value') setTimeout(() => $('eVal').focus(), 50);
   }
-  function closeEdit() { editBox.classList.remove('open'); editIt = null; }
+  function closeEdit() { editBox.classList.remove('open'); editIt = null; editIsNew = false; }
   function saveEdit() {
     const it = editIt; if (!it) return;
     const feed = it.type === 'feed', running = feed && !it.end, hint = t => { $('eHint').textContent = t; };
@@ -712,7 +772,7 @@
       if (raw === '' && feed) clearValue = true;
       else {
         const v = Number(raw.replace(',', '.'));
-        const ml = feed || it.type === 'bottle';
+        const ml = feed || it.type === 'bottle' || it.type === 'pump';
         if (raw === '' || !isFinite(v) || v < 0 || (!ml && v === 0)) return hint(ml ? 'Menge als Zahl in ml, 0 ist erlaubt.' : 'Bitte einen Wert eingeben.');
         value = v;
       }
@@ -722,13 +782,16 @@
     it.start = start;
     if (feed && !running) it.end = end;
     if (feed && editSide) it.side = editSide;
+    if (it.type === 'pump') { if (editSide === 'L' || editSide === 'R') it.side = editSide; else delete it.side; }
     if (!$('eValRow').hidden) {
       if (clearValue) { delete it.value; delete it.unit; }
       else { it.value = value; it.unit = feed ? 'ml' : it.type === 'fever' ? 'C' : VALUE_UNIT[it.type]; }
     }
     if (!$('eTextRow').hidden) it.note = note;
     if (!$('eCmtRow').hidden) { const c = $('eCmt').value.trim().slice(0, 500); if (c) it.note = c; else delete it.note; }
-    armed = null; save(); history.back(); syncButton(); render();
+    armed = null;
+    if (editIsNew) addEvent(Object.assign({}, it)); else save();
+    editIsNew = false; history.back(); syncButton(); render();
   }
   $('eCancel').addEventListener('pointerdown', e => { e.preventDefault(); history.back(); });
   $('eSave').addEventListener('pointerdown', e => { e.preventDefault(); saveEdit(); });
@@ -804,6 +867,15 @@
       const bottleChart = bAll.length ? '<div style="height:12px"></div>' + legend([{ c: '#6f9a4c', l: 'Flasche' }]) + svgBars(days, days.map(d => [{ v: bm.get(d.key).reduce((a, e) => a + (typeof e.value === 'number' ? e.value : 0), 0), color: '#6f9a4c' }]), { fmt: v => v + ' ml', labels: (st, i) => bm.get(days[i].key).length + '×' }) + '<div class="cap">Flasche: ml pro Tag, die Zahl über dem Balken ist die Anzahl.</div>' : '';
       cards.push({ key: 'feed', title: 'Stillen', sum: 'Heute ' + tf.length + ' mal · ' + durLabel(tf.reduce((a, e) => a + (e.end - e.start), 0)) + (tb.length ? ' · ' + tb.length + (tb.length === 1 ? ' Flasche' : ' Flaschen') : '') + (tfMl.length ? ' · ' + fmtNum(tfMl.reduce((a, e) => a + e.value, 0), 0) + ' ml' : '') + '<br>Ø letzte 7 Tage: ' + fmtNum(avgN, 1) + ' mal · ' + durLabel(avgM) + ' pro Tag',
         chart: f.length ? legend([{ c: C.L, l: 'links' }, { c: C.R, l: 'rechts' }]) + svgBars(days, stacks, { fmt: v => v + ' min', labels: (st, i) => m.get(days[i].key).length + '×' }) + '<div class="cap">Minuten pro Tag, letzte 14 Tage. Die Zahl über dem Balken ist die Anzahl.</div>' + bottleChart : (bottleChart || '<div class="cap">Noch keine Daten.</div>') });
+    }
+    // Abpumpen
+    {
+      const pv = alive().filter(e => e.type === 'pump'), m = byDay(pv, N), t = m.get(today) || [];
+      const ml = a => a.reduce((x, e) => x + (typeof e.value === 'number' && isFinite(e.value) ? e.value : 0), 0);
+      const avg = days.slice(-7).reduce((a, d) => a + ml(m.get(d.key)), 0) / 7;
+      const stacks = days.map(d => { const r = m.get(d.key); return [{ v: ml(r.filter(e => e.side === 'L')), color: C.L }, { v: ml(r.filter(e => e.side === 'R')), color: C.R }, { v: ml(r.filter(e => !sideOf(e.side))), color: '#b0638a' }]; });
+      cards.push({ key: 'pump', title: 'Abpumpen', sum: 'Heute ' + t.length + ' mal · ' + fmtNum(ml(t), 0) + ' ml<br>Ø letzte 7 Tage: ' + fmtNum(avg, 0) + ' ml pro Tag',
+        chart: pv.length ? legend([{ c: C.L, l: 'links' }, { c: C.R, l: 'rechts' }, { c: '#b0638a', l: 'beide' }]) + svgBars(days, stacks, { fmt: v => v + ' ml', labels: (st, i) => m.get(days[i].key).length + '×' }) + '<div class="cap">Abgepumpte ml pro Tag, letzte 14 Tage.</div>' : '<div class="cap">Noch keine Daten.</div>' });
     }
     // Windel
     {

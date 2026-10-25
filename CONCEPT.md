@@ -48,9 +48,10 @@ ist `note` der Eintrag selbst, dort gibt es kein zweites Feld.
 "Schon früher angefangen? vor 2 · 5 · 10 · 15 min · Andere · ✕". Ein Tipp verlegt den Beginn
 zurück (gerechnet vom Moment des Starts), "Andere" öffnet das Bearbeiten-Fenster. Die Leiste
 verschwindet nach einer Wahl, mit ✕ oder beim Stopp.
-**Flasche (seit v22)**: drei runde Knöpfe in einer Reihe: Links · 🍼 Flasche · Rechts
-(Pat wollte alle drei auf einer Linie; Flasche in der Mitte, damit links/rechts auf ihrer Seite
-bleiben). Öffnet Menge (30/60/90/120/150 ml antippen oder eintippen,
+**Knöpfe (seit v23)**: oben Links und Rechts als große Kreise, darunter in einer zweiten Reihe
+"🍼 Flasche" und "💧 Abpumpen" (Pat: "links, rechts in der Zeile und Flasche, Abpumpen und so
+weiter"; v22 hatte alle drei in einer Reihe).
+**Flasche (seit v22)**: Öffnet Menge (30/60/90/120/150 ml antippen oder eintippen,
 0 erlaubt) und Zeitpunkt. Typ `bottle`, `value` + `unit: 'ml'`, kein Timer. Steht in der
 Stillen-Liste mit 🍼, zählt im Tageskopf ("4 mal · 2 Flaschen · 1 h gesamt · 180 ml"), in
 "Letzte Flasche vor …" und in der Übersicht (Summe heute, eigene Grafik ml pro Tag).
@@ -224,6 +225,10 @@ db = {
 - v20 (2026-10-23): Einladungs-Link fragt vor dem Beitreten; Code aus dem Link nur A-Z, 0-9, Bindestrich.
 - v21 (2026-10-23): Kommentar zu jedem Eintrag (Bearbeiten → Kommentar), sichtbar unter der Zeile.
 - v22 (2026-10-25): "Schon früher angefangen?" direkt nach dem Start; Flasche mit Menge.
+- v23 (2026-10-25): Abpumpen (Typ `pump`: Seite links/rechts/beide, Menge in ml, Zeit,
+  Kommentar; eigene Summe "abgepumpt … ml" im Tageskopf, zählt NICHT als getrunken; eigene Karte
+  in der Übersicht). Filter-Chips über der Stillen-Liste: Alle · Brust · Flasche · Abpumpen
+  (gemerkt pro Handy). Knöpfe in zwei Reihen.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.
