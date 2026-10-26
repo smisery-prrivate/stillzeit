@@ -235,6 +235,12 @@ db = {
   gemessenen; "alle 6 gemessen", wenn keine fehlt), dann "Letzte 7 Tage: Ø 7,4 Mahlzeiten pro Tag · Ø 95 ml
   pro Mahlzeit (12 von 52 gemessen)". Beide Fenster rollend ab jetzt, nicht Kalendertag. Nur Flasche in den
   24 h: "2 Mahlzeiten (2 Flaschen)" ohne "0 Brust" und ohne Stillzeit (wie im Tageskopf).
+- v25 (2026-10-26): "Claude fragen" auf der Übersicht. Pat wollte KI in der App über sein
+  Claude-Abo; ein Abo lässt sich nicht als API an eine eigene App anschließen. Deshalb Weg A:
+  Frage + Einträge (Zeitraum 7 Tage / 30 Tage / Alles, Standard 30) als Text, übergeben über das
+  Android-Teilen-Menü an die Claude-App (dort antwortet Claude mit dem Abo; ohne Teilen-Menü wird
+  kopiert). Kein Server, kein Schlüssel, keine Kosten. Weg B (Antwort direkt in Stillzeit über
+  einen API-Schlüssel in einer Supabase Edge Function, pro Frage abgerechnet) ist offen.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.

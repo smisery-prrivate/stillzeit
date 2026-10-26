@@ -7,7 +7,7 @@
          node tools/csp-hash.js
      otherwise the browser refuses the script and the app stays blank (tools/hooks/pre-commit checks this).
      connect-src names the Supabase project from config.js; both change together. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-o/JRS0p0PMCz5pnbOq8eSdihHZfHZahwpqB3kRlt49g='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-j+v/Uktzfqxiod3j5ttFiJnD7uTHh2c9yJ4pVeipF3o='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e0607e">
 <link rel="manifest" href="manifest.json">
@@ -154,6 +154,23 @@
   #taps.n3 .tap { width: 106px; height: 106px; }
   #taps.n3 .tap .big { font-size: 19px; }
   .tap.plug { background: #7d5fb2; }
+  .tap.ask { background: #c96f4a; }
+  #ask { position: fixed; inset: 0; background: rgba(43,37,48,.35); z-index: 11; display: none; align-items: flex-end; justify-content: center; }
+  #ask.open { display: flex; }
+  #ask .panel { width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; background: var(--card); border-radius: 20px 20px 0 0; padding: 18px 16px calc(env(safe-area-inset-bottom) + 20px); }
+  #ask h2 { font-size: 18px; margin-bottom: 6px; }
+  #ask .hint { font-size: 13px; color: var(--muted); line-height: 1.45; margin-bottom: 12px; }
+  #ask textarea { width: 100%; min-height: 84px; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 16px; line-height: 1.4; background: var(--card); color: var(--ink); resize: vertical; margin-bottom: 10px; }
+  #ask textarea:focus { outline: none; border-color: var(--accent); }
+  #askIdeas { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  #askIdeas button, #askRange button { display: inline-block; width: auto; margin: 0; height: 38px; padding: 0 12px; border: 1px solid var(--line); border-radius: 19px; background: var(--bg); color: var(--ink); font-size: 14px; text-align: center; }
+  #askRange { display: flex; align-items: center; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+  #askRange .lbl { font-size: 14px; color: var(--muted); margin-right: 4px; }
+  #askRange button.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+  #ask .btns { display: flex; gap: 8px; }
+  #ask .btns button { flex: 1; height: 52px; border: none; border-radius: 12px; font-size: 16px; background: var(--bg); color: var(--ink); }
+  #ask .btns button.primary { background: #c96f4a; color: #fff; font-weight: 600; }
+  #askMsg { font-size: 13px; color: var(--muted); min-height: 18px; padding: 8px 2px 0; line-height: 1.4; }
   #cancel.gone { display: none; }
   #entryChips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
   #entryChips:empty { display: none; }
@@ -237,7 +254,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v24</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v25</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -276,6 +293,17 @@
     <div class="frow top" id="eCmtRow"><label for="eCmt">Kommentar</label><textarea id="eCmt" maxlength="500" placeholder="z.B. sehr unruhig, schläfrig, Bäuerchen"></textarea></div>
     <div class="ehint" id="eHint"></div>
     <div class="btns"><button id="eCancel">Abbrechen</button><button id="eSave" class="primary">Speichern</button></div>
+  </div>
+</div>
+<div id="ask">
+  <div class="panel">
+    <h2>Claude fragen</h2>
+    <div class="hint">Deine Frage geht zusammen mit euren Einträgen an die Claude-App. Dort antwortet Claude mit deinem Abo. Nichts davon läuft über unseren Server.</div>
+    <textarea id="askQ" maxlength="1000" placeholder="Was möchtest du wissen?"></textarea>
+    <div id="askIdeas"></div>
+    <div id="askRange"><span class="lbl">Zeitraum</span><button data-d="7">7 Tage</button><button data-d="30">30 Tage</button><button data-d="0">Alles</button></div>
+    <div class="btns"><button id="askCancel">Abbrechen</button><button id="askSend" class="primary">An Claude schicken</button></div>
+    <div id="askMsg"></div>
   </div>
 </div>
 <div id="entry">
@@ -458,7 +486,7 @@
       buttons: [{ t: 'height', label: 'Größe', sub: 'eintragen', cls: 'measure', input: { unit: 'cm', placeholder: 'z.B. 52' } }] },
     { key: 'med', title: 'Medizin', types: ['fever', 'cough', 'med'], empty: 'Nichts notiert.<br>Fieber messen, Husten antippen oder eine Notiz schreiben.',
       buttons: [{ t: 'fever', label: 'Fieber', cls: 'fever', input: { unit: '°C', placeholder: 'z.B. 38,4' } }, { t: 'cough', label: 'Husten', cls: 'cough' }, { t: 'med', label: 'Notiz', cls: 'note', input: { text: true, placeholder: 'z.B. Schnupfen, Zäpfchen' } }] },
-    { key: 'dash', title: 'Übersicht', types: [], empty: '', buttons: [] }
+    { key: 'dash', title: 'Übersicht', types: [], empty: '', buttons: [{ label: 'Claude', sub: 'fragen', cls: 'ask', action: 'ask' }] }
   ];
   const TYPE_LABEL = { birth: 'Geburt', pee: 'Urin', poo: 'Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', feed: 'Stillen', bottle: 'Flasche', pump: 'Abpumpen' };
   const TYPE_BADGE = { pee: 'U', poo: 'S', weight: 'kg', height: 'cm', fever: '°', cough: 'H', med: '✎' };
@@ -626,7 +654,7 @@
       for (const b of sc.buttons) {
         const el = document.createElement('button'); el.className = 'tap ' + b.cls;
         el.innerHTML = '<span class="big">' + b.label + '</span><span class="lbl">' + (b.sub || 'antippen') + '</span>';
-        el.addEventListener('click', () => b.input ? openEntry(b) : (addEvent(Object.assign({ type: b.t, start: Date.now() }, b.note ? { note: b.note } : {})), render()));
+        el.addEventListener('click', () => b.action === 'ask' ? openAsk() : b.input ? openEntry(b) : (addEvent(Object.assign({ type: b.t, start: Date.now() }, b.note ? { note: b.note } : {})), render()));
         taps.appendChild(el);
       }
       renderSince();
@@ -938,6 +966,63 @@
       list.appendChild(el);
     }
   }
+
+  // ---------- Claude fragen: question + entries as text, handed to the Claude app (uses the user's own subscription) ----------
+  const ASK_IDEAS = ['Fass die letzte Woche zusammen', 'Gibt es ein Muster beim Stillen?', 'Wie hat sich das Gewicht entwickelt?', 'Wann trinkt sie am meisten?'];
+  let askDays = 30;
+  const askBox = $('ask');
+  function paintRange() { for (const b of askBox.querySelectorAll('#askRange button')) b.classList.toggle('on', +b.dataset.d === askDays); }
+  for (const b of askBox.querySelectorAll('#askRange button')) b.addEventListener('click', () => { askDays = +b.dataset.d; paintRange(); });
+  function openAsk() {
+    $('askMsg').textContent = '';
+    const ideas = $('askIdeas'); ideas.innerHTML = '';
+    for (const t of ASK_IDEAS) { const c = document.createElement('button'); c.textContent = t; c.addEventListener('click', () => { $('askQ').value = t; }); ideas.appendChild(c); }
+    paintRange();
+    askBox.classList.add('open'); history.pushState({ ask: 1 }, '');
+  }
+  function closeAsk() { askBox.classList.remove('open'); }
+  $('askCancel').addEventListener('click', () => history.back());
+  askBox.addEventListener('click', e => { if (e.target === askBox) history.back(); });
+  window.addEventListener('popstate', closeAsk);
+  const ASK_TYPE = { feed: 'Stillen', bottle: 'Flasche', pump: 'Abpumpen', pee: 'Windel Urin', poo: 'Windel Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', birth: 'Geburt' };
+  function askExport(days) {
+    const since = days ? Date.now() - days * 864e5 : 0;
+    const evs = db.events.filter(e => !e.deleted && e.child_id === db.active_child && e.start >= since && (e.type !== 'feed' || e.end)).sort((a, b) => a.start - b.start);
+    const d2 = n => String(n).padStart(2, '0');
+    const date = ts => { const d = new Date(ts); return d2(d.getDate()) + '.' + d2(d.getMonth() + 1) + '.' + d.getFullYear(); };
+    const one = t => String(t == null ? '' : t).replace(/[\r\n;]+/g, ' ').replace(/\s+/g, ' ').trim();
+    const lines = ['Datum;Uhrzeit;Was;Seite;Dauer (min);Menge;Einheit;Notiz'];
+    for (const e of evs) {
+      const sd = sideOf(e.side), side = sd === 'L' ? 'links' : sd === 'R' ? 'rechts' : e.type === 'pump' ? 'beide' : '';
+      const val = typeof e.value === 'number' && isFinite(e.value) ? String(e.value).replace('.', ',') : '';
+      const unit = val ? (e.unit === 'C' ? '°C' : one(e.unit || VALUE_UNIT[e.type] || '')) : '';
+      lines.push([date(e.start), hhmm(e.start), ASK_TYPE[e.type] || one(e.type), side, e.type === 'feed' ? mins(e.end - e.start) : '', val, unit, one(e.note)].join(';'));
+    }
+    return { count: evs.length, csv: lines.join('\n') };
+  }
+  function askText(q, days) {
+    const ex = askExport(days);
+    const name = (db.children.find(c => c.id === db.active_child) || {}).name || 'Baby';
+    const span = days ? 'die letzten ' + days + ' Tage' : 'alle Einträge';
+    const now = new Date();
+    return { count: ex.count, text: 'Frage: ' + q + '\n\n' +
+      'Hier sind die Einträge aus unserer Baby-App „Stillzeit“ für ' + name + ', Zeitraum: ' + span + ', Stand ' + now.toLocaleString('de-DE') + '.\n' +
+      'Hinweise: Stillen hat eine Dauer in Minuten; eine leere Menge heißt "nicht gemessen", 0 heißt "nichts". Abpumpen ist abgepumpte Milch, nicht vom Baby getrunken. Seite "beide" beim Abpumpen heißt beidseitig.\n\n' +
+      ex.csv + '\n\nBitte beantworte die Frage oben anhand dieser Daten.' };
+  }
+  $('askSend').addEventListener('click', async () => {
+    const q = $('askQ').value.trim();
+    if (!q) { $('askMsg').textContent = 'Bitte zuerst eine Frage eintippen oder einen Vorschlag antippen.'; return; }
+    const out = askText(q, askDays);
+    if (!out.count) { $('askMsg').textContent = 'Für diesen Zeitraum gibt es noch keine Einträge.'; return; }
+    window.__askText = out.text;   // for the headless test; harmless otherwise
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Stillzeit', text: out.text }); $('askMsg').textContent = 'Wähle im Teilen-Menü die Claude-App.'; return; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    try { await navigator.clipboard.writeText(out.text); $('askMsg').textContent = 'Kopiert (' + out.count + ' Einträge). Öffne die Claude-App und füge den Text ein.'; }
+    catch (e) { $('askMsg').textContent = 'Teilen ging hier nicht. Nutze die Stillzeit-App auf dem Handy.'; }
+  });
 
   // ---------- value entry (weight, height, fever, note) ----------
   const entry = $('entry'); let entryBtn = null, entryOpenedAt = 0;
