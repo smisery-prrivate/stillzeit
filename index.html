@@ -7,7 +7,7 @@
          node tools/csp-hash.js
      otherwise the browser refuses the script and the app stays blank (tools/hooks/pre-commit checks this).
      connect-src names the Supabase project from config.js; both change together. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-+rfXT5ipaFIZo/Mo5vjIL2/DQ/mgj/I8jEvjhVzXkl0='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-o/JRS0p0PMCz5pnbOq8eSdihHZfHZahwpqB3kRlt49g='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e0607e">
 <link rel="manifest" href="manifest.json">
@@ -237,7 +237,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v23</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v24</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -859,13 +859,28 @@
     const cards = [];
     // Stillen
     {
-      const f = feeds(); const m = byDay(f, N); const tf = m.get(today) || [];
-      const w7 = days.slice(-7).map(d => m.get(d.key)); const avgN = w7.reduce((a, r) => a + r.length, 0) / 7; const avgM = w7.reduce((a, r) => a + r.reduce((x, e) => x + (e.end - e.start), 0), 0) / 7;
+      const f = feeds(); const m = byDay(f, N);
       const stacks = days.map(d => { const r = m.get(d.key); return [{ v: r.filter(e => e.side === 'L').reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.L }, { v: r.filter(e => e.side === 'R').reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.R }, { v: r.filter(e => !sideOf(e.side)).reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.feed }]; });
-      const bAll = bottles(), bm = byDay(bAll, N), tb = bm.get(today) || [];
-      const tfMl = tf.concat(tb).filter(e => typeof e.value === 'number' && isFinite(e.value));
+      const bAll = bottles(), bm = byDay(bAll, N);
       const bottleChart = bAll.length ? '<div style="height:12px"></div>' + legend([{ c: '#6f9a4c', l: 'Flasche' }]) + svgBars(days, days.map(d => [{ v: bm.get(d.key).reduce((a, e) => a + (typeof e.value === 'number' ? e.value : 0), 0), color: '#6f9a4c' }]), { fmt: v => v + ' ml', labels: (st, i) => bm.get(days[i].key).length + '×' }) + '<div class="cap">Flasche: ml pro Tag, die Zahl über dem Balken ist die Anzahl.</div>' : '';
-      cards.push({ key: 'feed', title: 'Stillen', sum: 'Heute ' + tf.length + ' mal · ' + durLabel(tf.reduce((a, e) => a + (e.end - e.start), 0)) + (tb.length ? ' · ' + tb.length + (tb.length === 1 ? ' Flasche' : ' Flaschen') : '') + (tfMl.length ? ' · ' + fmtNum(tfMl.reduce((a, e) => a + e.value, 0), 0) + ' ml' : '') + '<br>Ø letzte 7 Tage: ' + fmtNum(avgN, 1) + ' mal · ' + durLabel(avgM) + ' pro Tag',
+      // summary: rolling 24 h and 7 days over Mahlzeiten = breast feeds + bottles (pumping is not drunk and stays out).
+      // Amounts only over the measured ones: a value of 0 counts as measured, a missing value does not.
+      const meals = f.concat(bAll), t0 = Date.now(), measured = e => typeof e.value === 'number' && isFinite(e.value);
+      const m24 = meals.filter(e => e.start >= t0 - 864e5), m7 = meals.filter(e => e.start >= t0 - 7 * 864e5);
+      const gemessen = (x, y) => x === y ? (y === 1 ? '(gemessen)' : '(alle ' + y + ' gemessen)') : '(' + x + ' von ' + y + ' gemessen)';
+      const mlSum = a => a.reduce((s, e) => s + e.value, 0);
+      let sum = 'Letzte 24 h: noch keine Mahlzeit';
+      if (m24.length) {
+        const b24 = m24.filter(e => e.type === 'bottle'), f24 = m24.filter(e => e.type === 'feed'), x24 = m24.filter(measured);
+        // Brust/Flasche split only when a bottle is in the window; on a bottle-only day neither "0 Brust" nor a "0 s Stillen"
+        // duration is shown (same rule as the feed day header, which omits the duration without a breast feed).
+        const split = b24.length ? ' (' + (f24.length ? f24.length + ' Brust, ' : '') + b24.length + (b24.length === 1 ? ' Flasche' : ' Flaschen') + ')' : '';
+        sum = 'Letzte 24 h: ' + m24.length + (m24.length === 1 ? ' Mahlzeit' : ' Mahlzeiten') + split + (f24.length ? ' · ' + durLabel(f24.reduce((a, e) => a + (e.end - e.start), 0)) + ' Stillen' : '');
+        if (x24.length) sum += '<br>Menge: ' + fmtNum(mlSum(x24), 0) + ' ml ' + gemessen(x24.length, m24.length) + ' · Ø ' + fmtNum(mlSum(x24) / x24.length, 0) + ' ml pro Mahlzeit';
+      }
+      const x7 = m7.filter(measured);
+      sum += '<br>Letzte 7 Tage: ' + (m7.length ? 'Ø ' + fmtNum(m7.length / 7, 1) + ' Mahlzeiten pro Tag' + (x7.length ? ' · Ø ' + fmtNum(mlSum(x7) / x7.length, 0) + ' ml pro Mahlzeit ' + gemessen(x7.length, m7.length) : '') : 'noch keine Mahlzeit');
+      cards.push({ key: 'feed', title: 'Stillen', sum,
         chart: f.length ? legend([{ c: C.L, l: 'links' }, { c: C.R, l: 'rechts' }]) + svgBars(days, stacks, { fmt: v => v + ' min', labels: (st, i) => m.get(days[i].key).length + '×' }) + '<div class="cap">Minuten pro Tag, letzte 14 Tage. Die Zahl über dem Balken ist die Anzahl.</div>' + bottleChart : (bottleChart || '<div class="cap">Noch keine Daten.</div>') });
     }
     // Abpumpen

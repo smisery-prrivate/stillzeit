@@ -29,7 +29,7 @@ wischen", das fühlte sich unzuverlässig an). Der zuletzt offene Screen wird ge
    den Wert und die Differenz zur vorigen Messung in Gramm.
 4. **Größe** (`height`, value in cm): wie Gewicht, Differenz in cm.
 5. **Medizin**: Fieber (`fever`, value in °C), Husten (`cough`, ein Tipp), Notiz (`med`, Freitext).
-6. **Übersicht**: eine Karte pro Bereich mit Kurzfassung (heute, Ø 7 Tage, zuletzt). Antippen
+6. **Übersicht**: eine Karte pro Bereich mit Kurzfassung (letzte 24 h bzw. heute, Ø 7 Tage, zuletzt). Antippen
    klappt die Grafik auf: Stillen = Minuten pro Tag (links/rechts gestapelt, Anzahl als Zahl über
    dem Balken), Windel = Urin/Stuhl gestapelt pro Tag, Gewicht und Größe = Linie über die Zeit,
    Medizin = Fieberkurve mit 38-Grad-Linie und Husten pro Tag. Alles inline-SVG, eine Achse pro
@@ -229,6 +229,12 @@ db = {
   Kommentar; eigene Summe "abgepumpt … ml" im Tageskopf, zählt NICHT als getrunken; eigene Karte
   in der Übersicht). Filter-Chips über der Stillen-Liste: Alle · Brust · Flasche · Abpumpen
   (gemerkt pro Handy). Knöpfe in zwei Reihen.
+- v24 (2026-10-26): Übersicht, Karte Stillen mit neuer Zusammenfassung über Mahlzeiten (Brust +
+  Flasche, Abpumpen zählt nicht): "Letzte 24 h: 6 Mahlzeiten (5 Brust, 1 Flasche) · 1 h 20 min Stillen",
+  darunter nur wenn gemessen "Menge: 310 ml (3 von 6 gemessen) · Ø 103 ml pro Mahlzeit" (Ø nur über die
+  gemessenen; "alle 6 gemessen", wenn keine fehlt), dann "Letzte 7 Tage: Ø 7,4 Mahlzeiten pro Tag · Ø 95 ml
+  pro Mahlzeit (12 von 52 gemessen)". Beide Fenster rollend ab jetzt, nicht Kalendertag. Nur Flasche in den
+  24 h: "2 Mahlzeiten (2 Flaschen)" ohne "0 Brust" und ohne Stillzeit (wie im Tageskopf).
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.
