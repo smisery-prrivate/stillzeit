@@ -7,7 +7,7 @@
          node tools/csp-hash.js
      otherwise the browser refuses the script and the app stays blank (tools/hooks/pre-commit checks this).
      connect-src names the Supabase project from config.js; both change together. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-IBbRygE8Ztf1y1TbWsVj/cRYQOLq30UcI+KTaZPvmew='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-kiOfMosvLmcILOQ6RoBf46oTSbzsyRCdvUwLWG1S62M='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e0607e">
 <link rel="manifest" href="manifest.json">
@@ -70,18 +70,23 @@
   #startPump { background: #b0638a; box-shadow: 0 8px 20px rgba(176,99,138,.35); }
   #filterBar { display: flex; gap: 6px; margin: 0 0 12px; }
   #filterBar[hidden] { display: none; }
-  #day24 { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px 12px; margin: 0 0 12px; }
+  #day24 { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 6px 8px 8px; margin: 0 0 10px; cursor: pointer; user-select: none; }
   #day24[hidden] { display: none; }
-  #day24 .h { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 2px 8px; }
-  #day24 .g { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  #day24 .tile { background: var(--bg); border-radius: 12px; padding: 8px 10px 8px 12px; border-left: 4px solid var(--line); min-width: 0; }
-  #day24 .tile .l { font-size: 12px; color: var(--muted); }
-  #day24 .tile .v { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.25; }
-  #day24 .tile .s { font-size: 12px; color: var(--muted); line-height: 1.3; }
-  #day24 .tile.meals { border-left-color: var(--accent); }
-  #day24 .tile.breast { border-image: linear-gradient(180deg, var(--L) 50%, var(--R) 50%) 1; border-left-width: 4px; border-left-style: solid; }
-  #day24 .tile.bottle { border-left-color: #6f9a4c; }
-  #day24 .tile.pump { border-left-color: #b0638a; }
+  #day24 .top { display: flex; justify-content: space-between; align-items: center; margin: 0 4px 4px; }
+  #day24 .h { font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  #day24 .more { font-size: 11px; color: var(--muted); }
+  #day24 .g { display: grid; grid-template-columns: repeat(4, 1fr); }
+  #day24 .tile { min-width: 0; text-align: center; padding: 0 4px; border-left: 1px solid var(--line); display: flex; flex-direction: column; }
+  #day24 .tile:first-child { border-left: none; }
+  #day24 .tile .v { order: 1; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.25; white-space: nowrap; }
+  #day24 .tile .l { order: 2; font-size: 10.5px; color: var(--muted); line-height: 1.2; }
+  #day24 .tile .l::before { content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; vertical-align: 1px; background: var(--line); }
+  #day24 .tile.meals .l::before { background: var(--accent); }
+  #day24 .tile.breast .l::before { background: linear-gradient(90deg, var(--L) 50%, var(--R) 50%); }
+  #day24 .tile.bottle .l::before { background: #6f9a4c; }
+  #day24 .tile.pump .l::before { background: #b0638a; }
+  #day24 .tile .s { order: 3; display: none; font-size: 11px; color: var(--muted); line-height: 1.3; margin-top: 3px; }
+  #day24.open .tile .s { display: block; }
   #filterBar button { flex: 1 1 auto; min-width: 0; justify-content: center; white-space: nowrap; height: 38px; padding: 0 8px; border: 1px solid var(--line); border-radius: 19px; background: var(--card); color: var(--ink); font-size: 13.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
   #filterBar button .dot { flex: none; width: 9px; height: 9px; border-radius: 50%; }
   .dayhead { gap: 10px; }
@@ -212,6 +217,14 @@
   .dcard .dh { display: flex; align-items: center; justify-content: space-between; }
   .dcard .dt { font-size: 17px; font-weight: 700; }
   .dcard .ds { font-size: 13px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+  .ds .sblock + .sblock { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 2px; }
+  .ds .sh { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink); opacity: .7; margin: 8px 0 4px; }
+  .ds .srow { display: flex; gap: 10px; align-items: baseline; padding: 4px 0; border-bottom: 1px dashed #efe6e3; }
+  .ds .srow:last-child { border-bottom: none; }
+  .ds .sl { flex: 0 0 112px; color: var(--muted); }
+  .ds .sv { flex: 1; min-width: 0; }
+  .ds .sv b { color: var(--ink); font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .ds .sv small { font-size: 12px; color: var(--muted); }
   .dcard .chev { color: var(--muted); font-size: 14px; transition: transform .15s; }
   .dcard.open .chev { transform: rotate(180deg); }
   .dcard .chart { display: none; margin-top: 12px; }
@@ -266,14 +279,14 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v28</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v29</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
   <div id="syncline"></div>
   <div id="startFixAsk" hidden></div>
   <div id="amountAsk" hidden></div>
-  <div id="day24" hidden></div>
+  <div id="day24" hidden role="button" aria-label="Letzte 24 Stunden, Details ein- oder ausklappen"></div>
   <div id="filterBar" hidden></div>
   <div id="list"></div>
   <div id="empty" class="empty" hidden></div>
@@ -644,6 +657,10 @@
     const sum = a => a.filter(measured).reduce((x, e) => x + e.value, 0);
     return { f, b, p, xf: f.filter(measured), xb: b.filter(measured), xp: p.filter(measured), sum, dur: f.reduce((a, e) => a + (e.end - e.start), 0) };
   }
+  let day24Open = false;
+  try { day24Open = localStorage.getItem('stillzeit.day24') === 'open'; } catch (e) {}
+  // compact duration for the narrow tiles: 45 min, 1:05 h
+  const durShort = ms => { const m = Math.round(ms / 60000); return m < 60 ? m + ' min' : Math.floor(m / 60) + ':' + pad(m % 60) + ' h'; };
   function renderDay24(sc) {
     const box = $('day24');
     if (sc.key !== 'feed' || !ofScreen(sc).length) { box.hidden = true; box.innerHTML = ''; return; }
@@ -651,9 +668,10 @@
     const tile = (cls, label, value, sub) => '<div class="tile ' + cls + '"><div class="l">' + label + '</div><div class="v">' + value + '</div><div class="s">' + sub + '</div></div>';
     const mealSub = meals ? [s.f.length ? s.f.length + ' Brust' : '', s.b.length ? s.b.length + (s.b.length === 1 ? ' Flasche' : ' Flaschen') : ''].filter(Boolean).join(' · ') : 'noch keine';
     const breastSub = !s.f.length ? 'noch nicht gestillt' : s.xf.length ? fmtNum(s.sum(s.xf), 0) + ' ml (' + (s.xf.length === s.f.length ? (s.f.length === 1 ? 'gemessen' : 'alle gemessen') : s.xf.length + ' von ' + s.f.length + ' gemessen') + ')' : 'Menge nicht gemessen';
-    box.innerHTML = '<div class="h">Letzte 24 Stunden</div><div class="g">' +
+    box.classList.toggle('open', day24Open);
+    box.innerHTML = '<div class="top"><span class="h">Letzte 24 Stunden</span><span class="more">' + (day24Open ? 'weniger ▴' : 'Details ▾') + '</span></div><div class="g">' +
       tile('meals', 'Mahlzeiten', meals, mealSub) +
-      tile('breast', 'Gestillt', s.f.length ? durLabel(s.dur) : '–', breastSub) +
+      tile('breast', 'Gestillt', s.f.length ? durShort(s.dur) : '–', breastSub) +
       tile('bottle', 'Flasche gegeben', s.b.length ? fmtNum(s.sum(s.xb), 0) + ' ml' : '–', s.b.length ? (s.b.length === 1 ? '1 Flasche' : s.b.length + ' Flaschen') : 'keine') +
       tile('pump', 'Abgepumpt', s.p.length ? fmtNum(s.sum(s.xp), 0) + ' ml' : '–', s.p.length ? s.p.length + ' mal' : 'nichts') + '</div>';
     box.hidden = false;
@@ -933,28 +951,24 @@
       const meals = f.concat(bAll), t0 = Date.now(), measured = e => typeof e.value === 'number' && isFinite(e.value);
       const pumpsAll = alive().filter(e => e.type === 'pump');   // listed for clarity, never counted as a meal
       const m24 = meals.filter(e => e.start >= t0 - 864e5), m7 = meals.filter(e => e.start >= t0 - 7 * 864e5);
-      const gemessen = (x, y) => x === y ? (y === 1 ? '(gemessen)' : '(alle ' + y + ' gemessen)') : '(' + x + ' von ' + y + ' gemessen)';
       const mlSum = a => a.reduce((s, e) => s + e.value, 0);
-      let sum = 'Letzte 24 h: noch keine Mahlzeit';
-      if (m24.length) {
-        const b24 = m24.filter(e => e.type === 'bottle'), f24 = m24.filter(e => e.type === 'feed');
-        // Brust/Flasche split only when a bottle is in the window; on a bottle-only day neither "0 Brust" nor a "0 s Stillen"
-        // duration is shown (same rule as the feed day header, which omits the duration without a breast feed).
-        const split = b24.length ? ' (' + (f24.length ? f24.length + ' Brust, ' : '') + b24.length + (b24.length === 1 ? ' Flasche' : ' Flaschen') + ')' : '';
-        sum = 'Letzte 24 h: ' + m24.length + (m24.length === 1 ? ' Mahlzeit' : ' Mahlzeiten') + split + (f24.length ? ' · ' + durLabel(f24.reduce((a, e) => a + (e.end - e.start), 0)) + ' Stillen' : '');
-        // amounts: gestillt, Flasche gegeben and abgepumpt each on its own line, never one total (Pat, 2026-10-27)
-        const xf24 = f24.filter(measured), xb24 = b24.filter(measured);
-        if (xf24.length) sum += '<br>Gestillt: ' + fmtNum(mlSum(xf24), 0) + ' ml ' + gemessen(xf24.length, f24.length) + (xf24.length > 1 ? ' · Ø ' + fmtNum(mlSum(xf24) / xf24.length, 0) + ' ml pro Stillen' : '');
-        if (xb24.length) sum += '<br>Flasche gegeben: ' + fmtNum(mlSum(xb24), 0) + ' ml' + (xb24.length > 1 ? ' (' + xb24.length + ' Flaschen)' : '');
-      }
+      // two blocks, one row per value; gestillt, Flasche gegeben and abgepumpt never summed (Pat, 2026-10-27)
+      const gem = (x, y) => x === y ? (y === 1 ? 'gemessen' : 'alle ' + y + ' gemessen') : x + ' von ' + y + ' gemessen';
+      const row = (label, value, note) => '<div class="srow"><span class="sl">' + label + '</span><span class="sv"><b>' + value + '</b>' + (note ? ' <small>' + note + '</small>' : '') + '</span></div>';
+      const f24 = m24.filter(e => e.type === 'feed'), b24 = m24.filter(e => e.type === 'bottle'), xf24 = f24.filter(measured), xb24 = b24.filter(measured);
       const p24 = pumpsAll.filter(e => e.start >= t0 - 864e5 && measured(e));
-      if (p24.length) sum += '<br>Abgepumpt: ' + fmtNum(mlSum(p24), 0) + ' ml' + (p24.length > 1 ? ' (' + p24.length + ' mal)' : '');
+      let b1 = row('Mahlzeiten', m24.length || 'noch keine', b24.length ? [f24.length ? f24.length + ' Brust' : '', b24.length + (b24.length === 1 ? ' Flasche' : ' Flaschen')].filter(Boolean).join(' · ') : '');
+      if (f24.length) b1 += row('Stillzeit', durLabel(f24.reduce((a, e) => a + (e.end - e.start), 0)));
+      if (xf24.length) b1 += row('Gestillt', fmtNum(mlSum(xf24), 0) + ' ml', gem(xf24.length, f24.length) + (xf24.length > 1 ? ' · Ø ' + fmtNum(mlSum(xf24) / xf24.length, 0) + ' ml pro Stillen' : ''));
+      if (xb24.length) b1 += row('Flasche gegeben', fmtNum(mlSum(xb24), 0) + ' ml', xb24.length > 1 ? xb24.length + ' Flaschen' : '');
+      if (p24.length) b1 += row('Abgepumpt', fmtNum(mlSum(p24), 0) + ' ml', p24.length > 1 ? p24.length + ' mal' : '');
       const f7 = m7.filter(e => e.type === 'feed'), xf7 = f7.filter(measured), xb7 = m7.filter(e => e.type === 'bottle' && measured(e));
       const p7 = pumpsAll.filter(e => e.start >= t0 - 7 * 864e5 && measured(e));
-      sum += '<br>Letzte 7 Tage: ' + (m7.length ? 'Ø ' + fmtNum(m7.length / 7, 1) + ' Mahlzeiten pro Tag' : 'noch keine Mahlzeit');
-      if (xf7.length) sum += '<br>Gestillt: Ø ' + fmtNum(mlSum(xf7) / xf7.length, 0) + ' ml pro Stillen ' + gemessen(xf7.length, f7.length);
-      if (xb7.length) sum += '<br>Flasche gegeben: Ø ' + fmtNum(mlSum(xb7) / 7, 0) + ' ml pro Tag';
-      if (p7.length) sum += '<br>Abgepumpt: Ø ' + fmtNum(mlSum(p7) / 7, 0) + ' ml pro Tag';
+      let b2 = row('Mahlzeiten', m7.length ? 'Ø ' + fmtNum(m7.length / 7, 1) + ' pro Tag' : 'noch keine');
+      if (xf7.length) b2 += row('Gestillt', 'Ø ' + fmtNum(mlSum(xf7) / xf7.length, 0) + ' ml', 'pro Stillen · ' + gem(xf7.length, f7.length));
+      if (xb7.length) b2 += row('Flasche gegeben', 'Ø ' + fmtNum(mlSum(xb7) / 7, 0) + ' ml', 'pro Tag');
+      if (p7.length) b2 += row('Abgepumpt', 'Ø ' + fmtNum(mlSum(p7) / 7, 0) + ' ml', 'pro Tag');
+      const sum = '<div class="sblock"><div class="sh">Letzte 24 Stunden</div>' + b1 + '</div><div class="sblock"><div class="sh">Letzte 7 Tage</div>' + b2 + '</div>';
       cards.push({ key: 'feed', title: 'Stillen', sum,
         chart: f.length ? legend([{ c: C.L, l: 'links' }, { c: C.R, l: 'rechts' }]) + svgBars(days, stacks, { fmt: v => v + ' min', labels: (st, i) => m.get(days[i].key).length + '×' }) + '<div class="cap">Minuten pro Tag, letzte 14 Tage. Die Zahl über dem Balken ist die Anzahl.</div>' + bottleChart : (bottleChart || '<div class="cap">Noch keine Daten.</div>') });
     }
@@ -1070,6 +1084,8 @@
     try { await navigator.clipboard.writeText(out.text); $('askMsg').textContent = 'Kopiert (' + out.count + ' Einträge). Öffne die Claude-App und füge den Text ein.'; }
     catch (e) { $('askMsg').textContent = 'Teilen ging hier nicht. Nutze die Stillzeit-App auf dem Handy.'; }
   });
+
+  $('day24').addEventListener('click', () => { day24Open = !day24Open; try { localStorage.setItem('stillzeit.day24', day24Open ? 'open' : ''); } catch (e) {} renderDay24(cur()); });
 
   // ---------- value entry (weight, height, fever, note) ----------
   const entry = $('entry'); let entryBtn = null, entryOpenedAt = 0;

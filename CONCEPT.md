@@ -257,6 +257,11 @@ db = {
   Flasche gegeben (ml, Anzahl), Abgepumpt (ml, Anzahl). Gleiche Regeln wie die Stillen-Karte; zeigt immer alle
   Einträge, unabhängig vom Filter; aktualisiert sich bei jedem Eintrag und jede Minute; versteckt, solange es
   auf dem Screen noch keinen Eintrag gibt. Ein laufendes Stillen zählt erst nach dem Stopp.
+- v29 (2026-10-27): übersichtlicher (Pat: zu viel auf einmal, der Kasten zu groß). Stillen-Karte in der
+  Übersicht: zwei Blöcke "Letzte 24 Stunden" / "Letzte 7 Tage" mit Überschrift und Trennlinie, eine Zeile pro
+  Wert (Bezeichnung links, Wert fett, Details klein). Kasten auf dem Stillen-Screen: eine flache Zeile mit vier
+  Zahlen (Mahlzeiten, Gestillt, Flasche gegeben, Abgepumpt), Details ("2 von 5 gemessen" usw.) per Tipp
+  aufklappbar, gemerkt pro Handy.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.
