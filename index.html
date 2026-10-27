@@ -7,7 +7,7 @@
          node tools/csp-hash.js
      otherwise the browser refuses the script and the app stays blank (tools/hooks/pre-commit checks this).
      connect-src names the Supabase project from config.js; both change together. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-j+v/Uktzfqxiod3j5ttFiJnD7uTHh2c9yJ4pVeipF3o='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-NCtsPF9gv7UR5UAsPNzyOAKoxlWzDYCCtkuQrFXpRX4='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e0607e">
 <link rel="manifest" href="manifest.json">
@@ -254,7 +254,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v25</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v26</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -550,11 +550,12 @@
         const total = fr.reduce((a, r) => a + (r.end - r.start), 0);
         const col = dayColor(fr.length + br.length); head.style.background = col.bg; head.style.color = col.fg;
         const mlOf = a => a.filter(r => typeof r.value === 'number' && isFinite(r.value));
-        const drank = mlOf(fr.concat(br)), pumped = mlOf(pr);
+        // breast amount and bottle amount stay apart: never one total over both (Pat, 2026-10-27)
+        const breastMl = mlOf(fr), bottleMl = mlOf(br), pumped = mlOf(pr);
         const parts = [];
-        if (br.length) parts.push(br.length + (br.length === 1 ? ' Flasche' : ' Flaschen'));
         if (fr.length) parts.push(durLabel(total) + ' gesamt');
-        if (drank.length) parts.push(fmtNum(drank.reduce((a, r) => a + r.value, 0), 0) + ' ml');
+        if (breastMl.length) parts.push(fmtNum(breastMl.reduce((a, r) => a + r.value, 0), 0) + ' ml');
+        if (br.length) parts.push(br.length + (br.length === 1 ? ' Flasche' : ' Flaschen') + (bottleMl.length ? ' ' + fmtNum(bottleMl.reduce((a, r) => a + r.value, 0), 0) + ' ml' : ''));
         if (pr.length) parts.push('abgepumpt ' + (pumped.length ? fmtNum(pumped.reduce((a, r) => a + r.value, 0), 0) + ' ml' : pr.length + '×'));
         right = (fr.length ? '<span class="cnt">' + fr.length + ' mal</span> ' : '') + '<span class="sum">' + (fr.length && parts.length ? '· ' : '') + parts.join(' · ') + '</span>';
       } else if (sc.key === 'diaper') {
@@ -899,15 +900,20 @@
       const mlSum = a => a.reduce((s, e) => s + e.value, 0);
       let sum = 'Letzte 24 h: noch keine Mahlzeit';
       if (m24.length) {
-        const b24 = m24.filter(e => e.type === 'bottle'), f24 = m24.filter(e => e.type === 'feed'), x24 = m24.filter(measured);
+        const b24 = m24.filter(e => e.type === 'bottle'), f24 = m24.filter(e => e.type === 'feed');
         // Brust/Flasche split only when a bottle is in the window; on a bottle-only day neither "0 Brust" nor a "0 s Stillen"
         // duration is shown (same rule as the feed day header, which omits the duration without a breast feed).
         const split = b24.length ? ' (' + (f24.length ? f24.length + ' Brust, ' : '') + b24.length + (b24.length === 1 ? ' Flasche' : ' Flaschen') + ')' : '';
         sum = 'Letzte 24 h: ' + m24.length + (m24.length === 1 ? ' Mahlzeit' : ' Mahlzeiten') + split + (f24.length ? ' · ' + durLabel(f24.reduce((a, e) => a + (e.end - e.start), 0)) + ' Stillen' : '');
-        if (x24.length) sum += '<br>Menge: ' + fmtNum(mlSum(x24), 0) + ' ml ' + gemessen(x24.length, m24.length) + ' · Ø ' + fmtNum(mlSum(x24) / x24.length, 0) + ' ml pro Mahlzeit';
+        // amounts: breast and bottle each on their own, never one total over both (Pat, 2026-10-27)
+        const xf24 = f24.filter(measured), xb24 = b24.filter(measured);
+        if (xf24.length) sum += '<br>Brust: ' + fmtNum(mlSum(xf24), 0) + ' ml ' + gemessen(xf24.length, f24.length) + (xf24.length > 1 ? ' · Ø ' + fmtNum(mlSum(xf24) / xf24.length, 0) + ' ml pro Stillen' : '');
+        if (xb24.length) sum += '<br>Flasche: ' + fmtNum(mlSum(xb24), 0) + ' ml' + (xb24.length > 1 ? ' · Ø ' + fmtNum(mlSum(xb24) / xb24.length, 0) + ' ml pro Flasche' : '');
       }
-      const x7 = m7.filter(measured);
-      sum += '<br>Letzte 7 Tage: ' + (m7.length ? 'Ø ' + fmtNum(m7.length / 7, 1) + ' Mahlzeiten pro Tag' + (x7.length ? ' · Ø ' + fmtNum(mlSum(x7) / x7.length, 0) + ' ml pro Mahlzeit ' + gemessen(x7.length, m7.length) : '') : 'noch keine Mahlzeit');
+      const f7 = m7.filter(e => e.type === 'feed'), xf7 = f7.filter(measured), xb7 = m7.filter(e => e.type === 'bottle' && measured(e));
+      sum += '<br>Letzte 7 Tage: ' + (m7.length ? 'Ø ' + fmtNum(m7.length / 7, 1) + ' Mahlzeiten pro Tag' +
+        (xf7.length ? ' · Brust Ø ' + fmtNum(mlSum(xf7) / xf7.length, 0) + ' ml ' + gemessen(xf7.length, f7.length) : '') +
+        (xb7.length ? ' · Flasche Ø ' + fmtNum(mlSum(xb7) / xb7.length, 0) + ' ml' : '') : 'noch keine Mahlzeit');
       cards.push({ key: 'feed', title: 'Stillen', sum,
         chart: f.length ? legend([{ c: C.L, l: 'links' }, { c: C.R, l: 'rechts' }]) + svgBars(days, stacks, { fmt: v => v + ' min', labels: (st, i) => m.get(days[i].key).length + '×' }) + '<div class="cap">Minuten pro Tag, letzte 14 Tage. Die Zahl über dem Balken ist die Anzahl.</div>' + bottleChart : (bottleChart || '<div class="cap">Noch keine Daten.</div>') });
     }

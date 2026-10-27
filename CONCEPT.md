@@ -242,5 +242,10 @@ db = {
   kopiert). Kein Server, kein Schlüssel, keine Kosten. Weg B (Antwort direkt in Stillzeit über
   einen API-Schlüssel in einer Supabase Edge Function, pro Frage abgerechnet) ist offen.
 
+- v26 (2026-10-27): Brust- und Flaschenmenge werden nie zusammengezählt (Pat: die Flasche gehört nicht in die Menge).
+  Tageskopf: "3 mal · 40 min gesamt · 50 ml · 1 Flasche 90 ml" (die ml direkt nach der Stilldauer sind nur Brust).
+  Übersicht-Karte Stillen: eigene Zeilen "Brust: … ml (x von y gemessen) · Ø … ml pro Stillen" und "Flasche: … ml",
+  7 Tage: "· Brust Ø … ml (x von y gemessen) · Flasche Ø … ml". Mahlzeiten zählen weiter Brust + Flasche.
+
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.
