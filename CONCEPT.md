@@ -251,6 +251,12 @@ db = {
   Flasche gegeben 90 ml · abgepumpt 60 ml". Stillen-Karte: eigene Zeilen "Gestillt: …", "Flasche gegeben: …",
   "Abgepumpt: …" für 24 h (Summen) und 7 Tage (gestillt Ø pro Stillen über die gemessenen, Flasche und
   Abpumpen Ø pro Tag). Abpumpen zählt weiter nicht als Mahlzeit.
+- v28 (2026-10-27): Kasten "Letzte 24 Stunden" oben auf dem Stillen-Screen, über den Filtern (Pat: die
+  Tagesübersicht dort, wo eingetragen wird; bewusst rollende 24 h statt Kalendertag, damit es zur Übersicht
+  passt). Vier Kacheln: Mahlzeiten (Brust · Flaschen), Gestillt (Dauer, darunter ml mit "x von y gemessen"),
+  Flasche gegeben (ml, Anzahl), Abgepumpt (ml, Anzahl). Gleiche Regeln wie die Stillen-Karte; zeigt immer alle
+  Einträge, unabhängig vom Filter; aktualisiert sich bei jedem Eintrag und jede Minute; versteckt, solange es
+  auf dem Screen noch keinen Eintrag gibt. Ein laufendes Stillen zählt erst nach dem Stopp.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.

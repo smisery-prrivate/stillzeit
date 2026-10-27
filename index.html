@@ -7,7 +7,7 @@
          node tools/csp-hash.js
      otherwise the browser refuses the script and the app stays blank (tools/hooks/pre-commit checks this).
      connect-src names the Supabase project from config.js; both change together. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-vAT5LNfExczRa1FJfk0RR9ClfNonkSwqht0bLhxpH+g='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-IBbRygE8Ztf1y1TbWsVj/cRYQOLq30UcI+KTaZPvmew='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e0607e">
 <link rel="manifest" href="manifest.json">
@@ -70,6 +70,18 @@
   #startPump { background: #b0638a; box-shadow: 0 8px 20px rgba(176,99,138,.35); }
   #filterBar { display: flex; gap: 6px; margin: 0 0 12px; }
   #filterBar[hidden] { display: none; }
+  #day24 { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 10px 12px 12px; margin: 0 0 12px; }
+  #day24[hidden] { display: none; }
+  #day24 .h { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 2px 8px; }
+  #day24 .g { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  #day24 .tile { background: var(--bg); border-radius: 12px; padding: 8px 10px 8px 12px; border-left: 4px solid var(--line); min-width: 0; }
+  #day24 .tile .l { font-size: 12px; color: var(--muted); }
+  #day24 .tile .v { font-size: 19px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.25; }
+  #day24 .tile .s { font-size: 12px; color: var(--muted); line-height: 1.3; }
+  #day24 .tile.meals { border-left-color: var(--accent); }
+  #day24 .tile.breast { border-image: linear-gradient(180deg, var(--L) 50%, var(--R) 50%) 1; border-left-width: 4px; border-left-style: solid; }
+  #day24 .tile.bottle { border-left-color: #6f9a4c; }
+  #day24 .tile.pump { border-left-color: #b0638a; }
   #filterBar button { flex: 1 1 auto; min-width: 0; justify-content: center; white-space: nowrap; height: 38px; padding: 0 8px; border: 1px solid var(--line); border-radius: 19px; background: var(--card); color: var(--ink); font-size: 13.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
   #filterBar button .dot { flex: none; width: 9px; height: 9px; border-radius: 50%; }
   .dayhead { gap: 10px; }
@@ -254,13 +266,14 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v27</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v28</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
   <div id="syncline"></div>
   <div id="startFixAsk" hidden></div>
   <div id="amountAsk" hidden></div>
+  <div id="day24" hidden></div>
   <div id="filterBar" hidden></div>
   <div id="list"></div>
   <div id="empty" class="empty" hidden></div>
@@ -536,6 +549,7 @@
     list.innerHTML = '';
     if (sc.key === 'dash') { renderDash(list); $('empty').hidden = true; renderSince(); renderSyncLine(); return; }
     const fbar = $('filterBar'); fbar.hidden = sc.key !== 'feed';
+    renderDay24(sc);
     if (sc.key === 'feed') renderFilter(fbar);
     const flt = sc.key === 'feed' ? FILTERS.find(f => f.k === feedFilter) || FILTERS[0] : null;
     const rows0 = ofScreen(sc).filter(e => !flt || !flt.types || flt.types.includes(e.type));
@@ -622,6 +636,27 @@
       b.addEventListener('click', () => { feedFilter = f.k; try { localStorage.setItem('stillzeit.filter', f.k); } catch (e) {} armed = null; render(); });
       bar.appendChild(b);
     }
+  }
+  function stats24() {
+    const from = Date.now() - 864e5, measured = e => typeof e.value === 'number' && isFinite(e.value);
+    const f = feeds().filter(e => e.start >= from), b = bottles().filter(e => e.start >= from);
+    const p = alive().filter(e => e.type === 'pump' && e.start >= from);
+    const sum = a => a.filter(measured).reduce((x, e) => x + e.value, 0);
+    return { f, b, p, xf: f.filter(measured), xb: b.filter(measured), xp: p.filter(measured), sum, dur: f.reduce((a, e) => a + (e.end - e.start), 0) };
+  }
+  function renderDay24(sc) {
+    const box = $('day24');
+    if (sc.key !== 'feed' || !ofScreen(sc).length) { box.hidden = true; box.innerHTML = ''; return; }
+    const s = stats24(), meals = s.f.length + s.b.length;
+    const tile = (cls, label, value, sub) => '<div class="tile ' + cls + '"><div class="l">' + label + '</div><div class="v">' + value + '</div><div class="s">' + sub + '</div></div>';
+    const mealSub = meals ? [s.f.length ? s.f.length + ' Brust' : '', s.b.length ? s.b.length + (s.b.length === 1 ? ' Flasche' : ' Flaschen') : ''].filter(Boolean).join(' · ') : 'noch keine';
+    const breastSub = !s.f.length ? 'noch nicht gestillt' : s.xf.length ? fmtNum(s.sum(s.xf), 0) + ' ml (' + (s.xf.length === s.f.length ? (s.f.length === 1 ? 'gemessen' : 'alle gemessen') : s.xf.length + ' von ' + s.f.length + ' gemessen') + ')' : 'Menge nicht gemessen';
+    box.innerHTML = '<div class="h">Letzte 24 Stunden</div><div class="g">' +
+      tile('meals', 'Mahlzeiten', meals, mealSub) +
+      tile('breast', 'Gestillt', s.f.length ? durLabel(s.dur) : '–', breastSub) +
+      tile('bottle', 'Flasche gegeben', s.b.length ? fmtNum(s.sum(s.xb), 0) + ' ml' : '–', s.b.length ? (s.b.length === 1 ? '1 Flasche' : s.b.length + ' Flaschen') : 'keine') +
+      tile('pump', 'Abgepumpt', s.p.length ? fmtNum(s.sum(s.xp), 0) + ' ml' : '–', s.p.length ? s.p.length + ' mal' : 'nichts') + '</div>';
+    box.hidden = false;
   }
   const escapeHtml = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   function renderSince() {
