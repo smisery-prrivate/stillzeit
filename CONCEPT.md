@@ -246,6 +246,11 @@ db = {
   Tageskopf: "3 mal · 40 min gesamt · 50 ml · 1 Flasche 90 ml" (die ml direkt nach der Stilldauer sind nur Brust).
   Übersicht-Karte Stillen: eigene Zeilen "Brust: … ml (x von y gemessen) · Ø … ml pro Stillen" und "Flasche: … ml",
   7 Tage: "· Brust Ø … ml (x von y gemessen) · Flasche Ø … ml". Mahlzeiten zählen weiter Brust + Flasche.
+- v27 (2026-10-27): eindeutige Wörter, weil "Flasche" allein abgepumpt oder gegeben heißen konnte (Pat).
+  Überall "gestillt", "Flasche gegeben", "abgepumpt". Tageskopf: "2 mal · 30 min gesamt · gestillt 50 ml ·
+  Flasche gegeben 90 ml · abgepumpt 60 ml". Stillen-Karte: eigene Zeilen "Gestillt: …", "Flasche gegeben: …",
+  "Abgepumpt: …" für 24 h (Summen) und 7 Tage (gestillt Ø pro Stillen über die gemessenen, Flasche und
+  Abpumpen Ø pro Tag). Abpumpen zählt weiter nicht als Mahlzeit.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.

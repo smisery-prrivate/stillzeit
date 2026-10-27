@@ -7,7 +7,7 @@
          node tools/csp-hash.js
      otherwise the browser refuses the script and the app stays blank (tools/hooks/pre-commit checks this).
      connect-src names the Supabase project from config.js; both change together. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-NCtsPF9gv7UR5UAsPNzyOAKoxlWzDYCCtkuQrFXpRX4='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-vAT5LNfExczRa1FJfk0RR9ClfNonkSwqht0bLhxpH+g='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e0607e">
 <link rel="manifest" href="manifest.json">
@@ -254,7 +254,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v26</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v27</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -488,7 +488,7 @@
       buttons: [{ t: 'fever', label: 'Fieber', cls: 'fever', input: { unit: '°C', placeholder: 'z.B. 38,4' } }, { t: 'cough', label: 'Husten', cls: 'cough' }, { t: 'med', label: 'Notiz', cls: 'note', input: { text: true, placeholder: 'z.B. Schnupfen, Zäpfchen' } }] },
     { key: 'dash', title: 'Übersicht', types: [], empty: '', buttons: [{ label: 'Claude', sub: 'fragen', cls: 'ask', action: 'ask' }] }
   ];
-  const TYPE_LABEL = { birth: 'Geburt', pee: 'Urin', poo: 'Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', feed: 'Stillen', bottle: 'Flasche', pump: 'Abpumpen' };
+  const TYPE_LABEL = { birth: 'Geburt', pee: 'Urin', poo: 'Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', feed: 'Stillen', bottle: 'Flasche gegeben', pump: 'Abpumpen' };
   const TYPE_BADGE = { pee: 'U', poo: 'S', weight: 'kg', height: 'cm', fever: '°', cough: 'H', med: '✎' };
   let screen = SCREENS.findIndex(x => x.key === localStorage.getItem('stillzeit.screen'));
   if (screen < 0) screen = SCREENS.findIndex(x => x.key === 'feed');
@@ -554,8 +554,9 @@
         const breastMl = mlOf(fr), bottleMl = mlOf(br), pumped = mlOf(pr);
         const parts = [];
         if (fr.length) parts.push(durLabel(total) + ' gesamt');
-        if (breastMl.length) parts.push(fmtNum(breastMl.reduce((a, r) => a + r.value, 0), 0) + ' ml');
-        if (br.length) parts.push(br.length + (br.length === 1 ? ' Flasche' : ' Flaschen') + (bottleMl.length ? ' ' + fmtNum(bottleMl.reduce((a, r) => a + r.value, 0), 0) + ' ml' : ''));
+        // every amount names what it is: gestillt / Flasche gegeben / abgepumpt (Pat, 2026-10-27)
+        if (breastMl.length) parts.push('gestillt ' + fmtNum(breastMl.reduce((a, r) => a + r.value, 0), 0) + ' ml');
+        if (br.length) parts.push((br.length === 1 ? 'Flasche' : br.length + ' Flaschen') + ' gegeben' + (bottleMl.length ? ' ' + fmtNum(bottleMl.reduce((a, r) => a + r.value, 0), 0) + ' ml' : ''));
         if (pr.length) parts.push('abgepumpt ' + (pumped.length ? fmtNum(pumped.reduce((a, r) => a + r.value, 0), 0) + ' ml' : pr.length + '×'));
         right = (fr.length ? '<span class="cnt">' + fr.length + ' mal</span> ' : '') + '<span class="sum">' + (fr.length && parts.length ? '· ' : '') + parts.join(' · ') + '</span>';
       } else if (sc.key === 'diaper') {
@@ -578,7 +579,7 @@
           const sd = sideOf(it.side);
           inner = '<span class="s pump">' + (sd || 'LR') + '</span><span class="t">' + hhmm(it.start) + '</span><span class="d">abgepumpt · ' + (typeof it.value === 'number' && isFinite(it.value) ? fmtNum(it.value, 0) + ' ml' : '?') + '</span>';
         } else if (it.type === 'bottle') {
-          inner = '<span class="s bottle">🍼</span><span class="t">' + hhmm(it.start) + '</span><span class="d">Flasche · ' + (typeof it.value === 'number' && isFinite(it.value) ? fmtNum(it.value, 0) + ' ml' : '?') + '</span>';
+          inner = '<span class="s bottle">🍼</span><span class="t">' + hhmm(it.start) + '</span><span class="d">Flasche gegeben · ' + (typeof it.value === 'number' && isFinite(it.value) ? fmtNum(it.value, 0) + ' ml' : '?') + '</span>';
         } else if (it.type === 'pee' || it.type === 'poo' || it.type === 'cough') {
           inner = '<span class="s ' + it.type + '">' + TYPE_BADGE[it.type] + '</span><span class="t">' + hhmm(it.start) + '</span><span class="d">' + TYPE_LABEL[it.type] + '</span>';
         } else if (it.type === 'birth') {
@@ -629,7 +630,7 @@
     if (sc.key === 'feed') {
       const last = feeds()[0], lastB = bottles()[0];
       if (run) { el.innerHTML = 'Stillen läuft seit <b>' + hhmm(run.start) + '</b>' + (run.side ? ' · ' + sideName(run.side) : ''); return; }
-      if (lastB && (!last || lastB.start > last.end)) { el.innerHTML = 'Letzte Flasche <b>' + ago(Date.now() - lastB.start) + '</b>' + (typeof lastB.value === 'number' ? ' · ' + fmtNum(lastB.value, 0) + ' ml' : ''); return; }
+      if (lastB && (!last || lastB.start > last.end)) { el.innerHTML = 'Flasche gegeben <b>' + ago(Date.now() - lastB.start) + '</b>' + (typeof lastB.value === 'number' ? ' · ' + fmtNum(lastB.value, 0) + ' ml' : ''); return; }
       if (!last) { el.textContent = ''; return; }
       el.innerHTML = 'Letztes Stillen <b>' + ago(Date.now() - last.end) + '</b>' + (last.side ? ' · ' + sideName(last.side) : '');
       return;
@@ -891,10 +892,11 @@
       const f = feeds(); const m = byDay(f, N);
       const stacks = days.map(d => { const r = m.get(d.key); return [{ v: r.filter(e => e.side === 'L').reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.L }, { v: r.filter(e => e.side === 'R').reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.R }, { v: r.filter(e => !sideOf(e.side)).reduce((a, e) => a + (e.end - e.start), 0) / 60000, color: C.feed }]; });
       const bAll = bottles(), bm = byDay(bAll, N);
-      const bottleChart = bAll.length ? '<div style="height:12px"></div>' + legend([{ c: '#6f9a4c', l: 'Flasche' }]) + svgBars(days, days.map(d => [{ v: bm.get(d.key).reduce((a, e) => a + (typeof e.value === 'number' ? e.value : 0), 0), color: '#6f9a4c' }]), { fmt: v => v + ' ml', labels: (st, i) => bm.get(days[i].key).length + '×' }) + '<div class="cap">Flasche: ml pro Tag, die Zahl über dem Balken ist die Anzahl.</div>' : '';
+      const bottleChart = bAll.length ? '<div style="height:12px"></div>' + legend([{ c: '#6f9a4c', l: 'Flasche gegeben' }]) + svgBars(days, days.map(d => [{ v: bm.get(d.key).reduce((a, e) => a + (typeof e.value === 'number' ? e.value : 0), 0), color: '#6f9a4c' }]), { fmt: v => v + ' ml', labels: (st, i) => bm.get(days[i].key).length + '×' }) + '<div class="cap">Flasche gegeben: ml pro Tag, die Zahl über dem Balken ist die Anzahl.</div>' : '';
       // summary: rolling 24 h and 7 days over Mahlzeiten = breast feeds + bottles (pumping is not drunk and stays out).
       // Amounts only over the measured ones: a value of 0 counts as measured, a missing value does not.
       const meals = f.concat(bAll), t0 = Date.now(), measured = e => typeof e.value === 'number' && isFinite(e.value);
+      const pumpsAll = alive().filter(e => e.type === 'pump');   // listed for clarity, never counted as a meal
       const m24 = meals.filter(e => e.start >= t0 - 864e5), m7 = meals.filter(e => e.start >= t0 - 7 * 864e5);
       const gemessen = (x, y) => x === y ? (y === 1 ? '(gemessen)' : '(alle ' + y + ' gemessen)') : '(' + x + ' von ' + y + ' gemessen)';
       const mlSum = a => a.reduce((s, e) => s + e.value, 0);
@@ -905,15 +907,19 @@
         // duration is shown (same rule as the feed day header, which omits the duration without a breast feed).
         const split = b24.length ? ' (' + (f24.length ? f24.length + ' Brust, ' : '') + b24.length + (b24.length === 1 ? ' Flasche' : ' Flaschen') + ')' : '';
         sum = 'Letzte 24 h: ' + m24.length + (m24.length === 1 ? ' Mahlzeit' : ' Mahlzeiten') + split + (f24.length ? ' · ' + durLabel(f24.reduce((a, e) => a + (e.end - e.start), 0)) + ' Stillen' : '');
-        // amounts: breast and bottle each on their own, never one total over both (Pat, 2026-10-27)
+        // amounts: gestillt, Flasche gegeben and abgepumpt each on its own line, never one total (Pat, 2026-10-27)
         const xf24 = f24.filter(measured), xb24 = b24.filter(measured);
-        if (xf24.length) sum += '<br>Brust: ' + fmtNum(mlSum(xf24), 0) + ' ml ' + gemessen(xf24.length, f24.length) + (xf24.length > 1 ? ' · Ø ' + fmtNum(mlSum(xf24) / xf24.length, 0) + ' ml pro Stillen' : '');
-        if (xb24.length) sum += '<br>Flasche: ' + fmtNum(mlSum(xb24), 0) + ' ml' + (xb24.length > 1 ? ' · Ø ' + fmtNum(mlSum(xb24) / xb24.length, 0) + ' ml pro Flasche' : '');
+        if (xf24.length) sum += '<br>Gestillt: ' + fmtNum(mlSum(xf24), 0) + ' ml ' + gemessen(xf24.length, f24.length) + (xf24.length > 1 ? ' · Ø ' + fmtNum(mlSum(xf24) / xf24.length, 0) + ' ml pro Stillen' : '');
+        if (xb24.length) sum += '<br>Flasche gegeben: ' + fmtNum(mlSum(xb24), 0) + ' ml' + (xb24.length > 1 ? ' (' + xb24.length + ' Flaschen)' : '');
       }
+      const p24 = pumpsAll.filter(e => e.start >= t0 - 864e5 && measured(e));
+      if (p24.length) sum += '<br>Abgepumpt: ' + fmtNum(mlSum(p24), 0) + ' ml' + (p24.length > 1 ? ' (' + p24.length + ' mal)' : '');
       const f7 = m7.filter(e => e.type === 'feed'), xf7 = f7.filter(measured), xb7 = m7.filter(e => e.type === 'bottle' && measured(e));
-      sum += '<br>Letzte 7 Tage: ' + (m7.length ? 'Ø ' + fmtNum(m7.length / 7, 1) + ' Mahlzeiten pro Tag' +
-        (xf7.length ? ' · Brust Ø ' + fmtNum(mlSum(xf7) / xf7.length, 0) + ' ml ' + gemessen(xf7.length, f7.length) : '') +
-        (xb7.length ? ' · Flasche Ø ' + fmtNum(mlSum(xb7) / xb7.length, 0) + ' ml' : '') : 'noch keine Mahlzeit');
+      const p7 = pumpsAll.filter(e => e.start >= t0 - 7 * 864e5 && measured(e));
+      sum += '<br>Letzte 7 Tage: ' + (m7.length ? 'Ø ' + fmtNum(m7.length / 7, 1) + ' Mahlzeiten pro Tag' : 'noch keine Mahlzeit');
+      if (xf7.length) sum += '<br>Gestillt: Ø ' + fmtNum(mlSum(xf7) / xf7.length, 0) + ' ml pro Stillen ' + gemessen(xf7.length, f7.length);
+      if (xb7.length) sum += '<br>Flasche gegeben: Ø ' + fmtNum(mlSum(xb7) / 7, 0) + ' ml pro Tag';
+      if (p7.length) sum += '<br>Abgepumpt: Ø ' + fmtNum(mlSum(p7) / 7, 0) + ' ml pro Tag';
       cards.push({ key: 'feed', title: 'Stillen', sum,
         chart: f.length ? legend([{ c: C.L, l: 'links' }, { c: C.R, l: 'rechts' }]) + svgBars(days, stacks, { fmt: v => v + ' min', labels: (st, i) => m.get(days[i].key).length + '×' }) + '<div class="cap">Minuten pro Tag, letzte 14 Tage. Die Zahl über dem Balken ist die Anzahl.</div>' + bottleChart : (bottleChart || '<div class="cap">Noch keine Daten.</div>') });
     }
@@ -990,7 +996,7 @@
   $('askCancel').addEventListener('click', () => history.back());
   askBox.addEventListener('click', e => { if (e.target === askBox) history.back(); });
   window.addEventListener('popstate', closeAsk);
-  const ASK_TYPE = { feed: 'Stillen', bottle: 'Flasche', pump: 'Abpumpen', pee: 'Windel Urin', poo: 'Windel Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', birth: 'Geburt' };
+  const ASK_TYPE = { feed: 'Stillen', bottle: 'Flasche gegeben', pump: 'Abpumpen', pee: 'Windel Urin', poo: 'Windel Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', birth: 'Geburt' };
   function askExport(days) {
     const since = days ? Date.now() - days * 864e5 : 0;
     const evs = db.events.filter(e => !e.deleted && e.child_id === db.active_child && e.start >= since && (e.type !== 'feed' || e.end)).sort((a, b) => a.start - b.start);
