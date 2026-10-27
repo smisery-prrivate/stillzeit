@@ -7,7 +7,7 @@
          node tools/csp-hash.js
      otherwise the browser refuses the script and the app stays blank (tools/hooks/pre-commit checks this).
      connect-src names the Supabase project from config.js; both change together. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-kiOfMosvLmcILOQ6RoBf46oTSbzsyRCdvUwLWG1S62M='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-q8pizblt853M6txN1OBMjx3wISFs0ZdvS2cqOXc4Huo='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e0607e">
 <link rel="manifest" href="manifest.json">
@@ -85,6 +85,9 @@
   #day24 .tile.breast .l::before { background: linear-gradient(90deg, var(--L) 50%, var(--R) 50%); }
   #day24 .tile.bottle .l::before { background: #6f9a4c; }
   #day24 .tile.pump .l::before { background: #b0638a; }
+  #day24 .tile.pee .l::before { background: #c9922e; }
+  #day24 .tile.poo .l::before { background: #8f5f34; }
+  #day24 .tile.last .l::before { background: var(--muted); }
   #day24 .tile .s { order: 3; display: none; font-size: 11px; color: var(--muted); line-height: 1.3; margin-top: 3px; }
   #day24.open .tile .s { display: block; }
   #filterBar button { flex: 1 1 auto; min-width: 0; justify-content: center; white-space: nowrap; height: 38px; padding: 0 8px; border: 1px solid var(--line); border-radius: 19px; background: var(--card); color: var(--ink); font-size: 13.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
@@ -279,7 +282,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v29</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v30</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -663,13 +666,26 @@
   const durShort = ms => { const m = Math.round(ms / 60000); return m < 60 ? m + ' min' : Math.floor(m / 60) + ':' + pad(m % 60) + ' h'; };
   function renderDay24(sc) {
     const box = $('day24');
-    if (sc.key !== 'feed' || !ofScreen(sc).length) { box.hidden = true; box.innerHTML = ''; return; }
-    const s = stats24(), meals = s.f.length + s.b.length;
+    if ((sc.key !== 'feed' && sc.key !== 'diaper') || !ofScreen(sc).length) { box.hidden = true; box.innerHTML = ''; return; }
     const tile = (cls, label, value, sub) => '<div class="tile ' + cls + '"><div class="l">' + label + '</div><div class="v">' + value + '</div><div class="s">' + sub + '</div></div>';
+    const head = '<div class="top"><span class="h">Letzte 24 Stunden</span><span class="more">' + (day24Open ? 'weniger ▴' : 'Details ▾') + '</span></div>';
+    box.classList.toggle('open', day24Open);
+    if (sc.key === 'diaper') {
+      // counts in the rolling 24 h, same window as the Windel card on the Übersicht
+      const from = Date.now() - 864e5, all = ofScreen(sc), w = all.filter(e => e.start >= from);
+      const pee = w.filter(e => e.type === 'pee'), poo = w.filter(e => e.type === 'poo'), last = all[0];
+      const lastOf = a => a.length ? 'zuletzt ' + hhmm(a[0].start) : 'keine';
+      box.innerHTML = head + '<div class="g" style="grid-template-columns:repeat(3,1fr)">' +
+        tile('pee', 'Urin', pee.length + ' mal', lastOf(pee)) +
+        tile('poo', 'Stuhl', poo.length + ' mal', lastOf(poo)) +
+        tile('last', 'Letzte Windel', Date.now() - last.start < 60000 ? 'gerade eben' : 'vor ' + durShort(Date.now() - last.start), hhmm(last.start) + ' · ' + TYPE_LABEL[last.type]) + '</div>';
+      box.hidden = false;
+      return;
+    }
+    const s = stats24(), meals = s.f.length + s.b.length;
     const mealSub = meals ? [s.f.length ? s.f.length + ' Brust' : '', s.b.length ? s.b.length + (s.b.length === 1 ? ' Flasche' : ' Flaschen') : ''].filter(Boolean).join(' · ') : 'noch keine';
     const breastSub = !s.f.length ? 'noch nicht gestillt' : s.xf.length ? fmtNum(s.sum(s.xf), 0) + ' ml (' + (s.xf.length === s.f.length ? (s.f.length === 1 ? 'gemessen' : 'alle gemessen') : s.xf.length + ' von ' + s.f.length + ' gemessen') + ')' : 'Menge nicht gemessen';
-    box.classList.toggle('open', day24Open);
-    box.innerHTML = '<div class="top"><span class="h">Letzte 24 Stunden</span><span class="more">' + (day24Open ? 'weniger ▴' : 'Details ▾') + '</span></div><div class="g">' +
+    box.innerHTML = head + '<div class="g">' +
       tile('meals', 'Mahlzeiten', meals, mealSub) +
       tile('breast', 'Gestillt', s.f.length ? durShort(s.dur) : '–', breastSub) +
       tile('bottle', 'Flasche gegeben', s.b.length ? fmtNum(s.sum(s.xb), 0) + ' ml' : '–', s.b.length ? (s.b.length === 1 ? '1 Flasche' : s.b.length + ' Flaschen') : 'keine') +
@@ -983,9 +999,9 @@
     }
     // Windel
     {
-      const evs = alive().filter(e => e.type === 'pee' || e.type === 'poo'); const m = byDay(evs, N); const t = m.get(today) || [];
+      const evs = alive().filter(e => e.type === 'pee' || e.type === 'poo'); const m = byDay(evs, N); const t = evs.filter(e => e.start >= Date.now() - 864e5);
       const stacks = days.map(d => { const r = m.get(d.key); return [{ v: r.filter(e => e.type === 'pee').length, color: C.pee }, { v: r.filter(e => e.type === 'poo').length, color: C.poo }]; });
-      cards.push({ key: 'diaper', title: 'Windel', sum: 'Heute ' + t.length + ' mal · ' + t.filter(e => e.type === 'pee').length + ' Urin · ' + t.filter(e => e.type === 'poo').length + ' Stuhl',
+      cards.push({ key: 'diaper', title: 'Windel', sum: 'Letzte 24 h: ' + t.length + ' mal · ' + t.filter(e => e.type === 'pee').length + ' Urin · ' + t.filter(e => e.type === 'poo').length + ' Stuhl',
         chart: evs.length ? legend([{ c: C.pee, l: 'Urin' }, { c: C.poo, l: 'Stuhl' }]) + svgBars(days, stacks, { labels: st => st.reduce((a, x) => a + x.v, 0) }) + '<div class="cap">Windeln pro Tag, letzte 14 Tage.</div>' : '<div class="cap">Noch keine Daten.</div>' });
     }
     // Gewicht / Größe

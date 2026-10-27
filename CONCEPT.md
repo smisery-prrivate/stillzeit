@@ -262,6 +262,9 @@ db = {
   Wert (Bezeichnung links, Wert fett, Details klein). Kasten auf dem Stillen-Screen: eine flache Zeile mit vier
   Zahlen (Mahlzeiten, Gestillt, Flasche gegeben, Abgepumpt), Details ("2 von 5 gemessen" usw.) per Tipp
   aufklappbar, gemerkt pro Handy.
+- v30 (2026-10-27): derselbe 24-Stunden-Streifen auf dem Windel-Screen (Pat): Urin (Anzahl), Stuhl (Anzahl),
+  Letzte Windel (vor …); Details: jeweils "zuletzt HH:MM". Die Windel-Karte in der Übersicht zählt jetzt
+  ebenfalls die letzten 24 h statt "Heute", damit beide Stellen dieselben Zahlen zeigen.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.
