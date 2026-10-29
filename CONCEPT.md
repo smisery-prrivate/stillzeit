@@ -265,6 +265,12 @@ db = {
 - v30 (2026-10-27): derselbe 24-Stunden-Streifen auf dem Windel-Screen (Pat): Urin (Anzahl), Stuhl (Anzahl),
   Letzte Windel (vor …); Details: jeweils "zuletzt HH:MM". Die Windel-Karte in der Übersicht zählt jetzt
   ebenfalls die letzten 24 h statt "Heute", damit beide Stellen dieselben Zahlen zeigen.
+- v31 (2026-10-29): Sync-Lücken geschlossen (Pat: eine 90-ml-Flasche fehlte auf dem anderen Handy). Ursache: der
+  Sync-Cursor war ein Zeitstempel der Handy-Uhren; Einträge mit früherem Stempel (Uhr geht nach, Eintrag kam
+  verspätet beim Server an) wurden weder geholt noch hochgeladen. Jetzt: Hochladen nach einer Liste der lokal
+  geänderten Einträge (`stillzeit.dirty`), unabhängig von Uhren; Holen mit 3 Tagen Überlappung, beim App-Start
+  und beim Tipp auf die Statuszeile alles. Einmalige Reparatur beim ersten Start von v31: alles holen, dann alles
+  hochladen. Test `_preview/tests/t14-sync-gaps.js` (fiel mit v30 dreimal durch).
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.
