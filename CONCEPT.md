@@ -271,6 +271,11 @@ db = {
   geänderten Einträge (`stillzeit.dirty`), unabhängig von Uhren; Holen mit 3 Tagen Überlappung, beim App-Start
   und beim Tipp auf die Statuszeile alles. Einmalige Reparatur beim ersten Start von v31: alles holen, dann alles
   hochladen. Test `_preview/tests/t14-sync-gaps.js` (fiel mit v30 dreimal durch).
+- v32 (2026-10-30): Neuer Bildschirm „Medikamente“ (Typ `dose`, Text im note-Feld) nach „Gesundheit“
+  (vorher „Medizin“: Fieber, Husten, Notiz). Ein Knopf „Gegeben“ öffnet eine Auswahl: Vitamin D, Fluorid,
+  Vitamin D + Fluorid, Jodid, Vitamin K, Paracetamol, Ibuprofen, Simeticon, Probiotika, Nasentropfen, Eisen,
+  dazu alles schon einmal Eingetippte; Antippen speichert sofort, Zeitpunkt korrigierbar. Leiste „Letzte 24
+  Stunden“ je Medikament; Übersicht-Karte mit 14-Tage-Raster je Medikament.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.

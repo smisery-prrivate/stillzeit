@@ -7,7 +7,7 @@
          node tools/csp-hash.js
      otherwise the browser refuses the script and the app stays blank (tools/hooks/pre-commit checks this).
      connect-src names the Supabase project from config.js; both change together. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-o+NSOpDG3g5LYNzX+rHcr12aduVUMBRkiStXI/Eh4Us='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-kK+WnMbwp/e5nRdcDMQSp0Wo50hGzDM1b5Sd38NaXBo='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e0607e">
 <link rel="manifest" href="manifest.json">
@@ -88,6 +88,8 @@
   #day24 .tile.pee .l::before { background: #c9922e; }
   #day24 .tile.poo .l::before { background: #8f5f34; }
   #day24 .tile.last .l::before { background: var(--muted); }
+  #day24 .tile.dose .l { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #day24 .tile.dose .l::before { background: #3b7ea1; }
   #day24 .tile .s { order: 3; display: none; font-size: 11px; color: var(--muted); line-height: 1.3; margin-top: 3px; }
   #day24.open .tile .s { display: block; }
   #filterBar button { flex: 1 1 auto; min-width: 0; justify-content: center; white-space: nowrap; height: 38px; padding: 0 8px; border: 1px solid var(--line); border-radius: 19px; background: var(--card); color: var(--ink); font-size: 13.5px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
@@ -209,6 +211,7 @@
   .tl .gap { color: var(--muted); font-size: 12px; }
   .tap.pee { background: #d9a441; } .tap.poo { background: #8a6a4a; }
   .tap.measure { background: #2a9d8f; }
+  .tap.dose { background: #3b7ea1; } .row .s.dose { background: #e1eef5; color: #2c6584; }
   .tap.fever { background: #d9534f; } .tap.cough { background: #5c7f9e; } .tap.note { background: #7a7580; }
   .row .s.pee { background: #fbf0d6; color: #9a6f12; } .row .s.poo { background: #eee4da; color: #6b4d31; }
   .row .s.fever { background: #fbe3e2; color: #a83632; } .row .s.cough { background: #e3ecf4; color: #3f5f7c; } .row .s.note, .row .s.measure { background: #eee; color: #666; }
@@ -282,7 +285,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v31</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v32</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -515,7 +518,7 @@
   // ---------- screens ----------
   const SCREENS = [
     { key: 'birth', title: 'Geburt', types: ['birth'], empty: 'Noch nichts festgehalten.<br>Unten antippen, wenn etwas passiert. Die Uhrzeit wird gespeichert und lässt sich später korrigieren.',
-      buttons: [{ t: 'birth', label: 'Ereignis', sub: 'festhalten', cls: 'plug', input: { text: true, time: true, chips: true, placeholder: 'Oder eigenes eintippen' } }] },
+      buttons: [{ t: 'birth', label: 'Ereignis', sub: 'festhalten', cls: 'plug', input: { text: true, time: true, chips: true, title: 'Was ist passiert?', placeholder: 'Oder eigenes eintippen' } }] },
     { key: 'feed', title: 'Stillen', types: ['feed', 'bottle', 'pump'], empty: 'Noch kein Eintrag.<br>Unten tippen, wenn das Stillen beginnt.' },
     { key: 'diaper', title: 'Windel', types: ['pee', 'poo'], empty: 'Noch keine Windel.<br>Unten tippen: Urin oder Stuhl.',
       buttons: [{ t: 'pee', label: 'Urin', cls: 'pee' }, { t: 'poo', label: 'Stuhl', cls: 'poo' }] },
@@ -523,19 +526,24 @@
       buttons: [{ t: 'weight', label: 'Gewicht', sub: 'eintragen', cls: 'measure', input: { unit: 'kg', placeholder: 'z.B. 3,45' } }] },
     { key: 'height', title: 'Größe', types: ['height'], empty: 'Noch keine Größe.<br>Unten tippen und eintragen.',
       buttons: [{ t: 'height', label: 'Größe', sub: 'eintragen', cls: 'measure', input: { unit: 'cm', placeholder: 'z.B. 52' } }] },
-    { key: 'med', title: 'Medizin', types: ['fever', 'cough', 'med'], empty: 'Nichts notiert.<br>Fieber messen, Husten antippen oder eine Notiz schreiben.',
-      buttons: [{ t: 'fever', label: 'Fieber', cls: 'fever', input: { unit: '°C', placeholder: 'z.B. 38,4' } }, { t: 'cough', label: 'Husten', cls: 'cough' }, { t: 'med', label: 'Notiz', cls: 'note', input: { text: true, placeholder: 'z.B. Schnupfen, Zäpfchen' } }] },
+    { key: 'med', title: 'Gesundheit', types: ['fever', 'cough', 'med'], empty: 'Nichts notiert.<br>Fieber messen, Husten antippen oder eine Notiz schreiben.',
+      buttons: [{ t: 'fever', label: 'Fieber', cls: 'fever', input: { unit: '°C', placeholder: 'z.B. 38,4' } }, { t: 'cough', label: 'Husten', cls: 'cough' }, { t: 'med', label: 'Notiz', cls: 'note', input: { text: true, placeholder: 'z.B. Schnupfen, Ausschlag' } }] },
+    { key: 'dose', title: 'Medikamente', types: ['dose'], empty: 'Noch nichts gegeben.<br>Unten antippen und auswählen, was das Baby bekommen hat, z.B. Vitamin D.',
+      buttons: [{ t: 'dose', label: 'Gegeben', sub: 'eintragen', cls: 'dose', input: { text: true, time: true, chips: true, title: 'Was wurde gegeben?', placeholder: 'Oder eintippen, z.B. Paracetamol 125 mg' } }] },
     { key: 'dash', title: 'Übersicht', types: [], empty: '', buttons: [{ label: 'Claude', sub: 'fragen', cls: 'ask', action: 'ask' }] }
   ];
-  const TYPE_LABEL = { birth: 'Geburt', pee: 'Urin', poo: 'Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', feed: 'Stillen', bottle: 'Flasche gegeben', pump: 'Abpumpen' };
-  const TYPE_BADGE = { pee: 'U', poo: 'S', weight: 'kg', height: 'cm', fever: '°', cough: 'H', med: '✎' };
+  const TYPE_LABEL = { birth: 'Geburt', pee: 'Urin', poo: 'Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', dose: 'Medikament', feed: 'Stillen', bottle: 'Flasche gegeben', pump: 'Abpumpen' };
+  const TYPE_BADGE = { pee: 'U', poo: 'S', weight: 'kg', height: 'cm', fever: '°', cough: 'H', med: '✎', dose: '💊' };
   let screen = SCREENS.findIndex(x => x.key === localStorage.getItem('stillzeit.screen'));
   if (screen < 0) screen = SCREENS.findIndex(x => x.key === 'feed');
   const BIRTH_PRESETS = ['Schleimpfropf gelöst', 'Fruchtwasser abgegangen', 'Wehen beginnen', 'Wehen regelmäßig', 'Blutung', 'Hebamme angerufen', 'Losgefahren', 'In der Klinik', 'PDA', 'Presswehen', 'Geburt'];
+  // typical things a baby gets daily or now and then; anything typed once comes back as its own chip
+  const DOSE_PRESETS = ['Vitamin D', 'Fluorid', 'Vitamin D + Fluorid', 'Jodid', 'Vitamin K', 'Paracetamol', 'Ibuprofen', 'Simeticon (Blähungen)', 'Probiotika', 'Nasentropfen', 'Eisen'];
+  const PRESETS = { birth: BIRTH_PRESETS, dose: DOSE_PRESETS };
   // own categories: whatever was typed before comes back as a suggestion, most used first
-  function ownBirthLabels() {
-    const cnt = new Map();
-    for (const e of db.events) if (e.type === 'birth' && !e.deleted && e.note && !BIRTH_PRESETS.includes(e.note)) cnt.set(e.note, (cnt.get(e.note) || 0) + 1);
+  function ownLabels(type) {
+    const cnt = new Map(), pre = PRESETS[type] || [];
+    for (const e of db.events) if (e.type === type && !e.deleted && typeof e.note === 'string' && e.note && !pre.includes(e.note)) cnt.set(e.note, (cnt.get(e.note) || 0) + 1);
     return [...cnt.entries()].sort((a, b) => b[1] - a[1]).map(x => x[0]).slice(0, 8);
   }
   const toLocalInput = ts => { const d = new Date(ts); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + 'T' + pad(d.getHours()) + ':' + pad(d.getMinutes()); };
@@ -624,8 +632,8 @@
           inner = '<span class="s ' + it.type + '">' + TYPE_BADGE[it.type] + '</span><span class="t">' + hhmm(it.start) + '</span><span class="d">' + TYPE_LABEL[it.type] + '</span>';
         } else if (it.type === 'birth') {
           inner = '<span class="s birth">●</span><span class="t" style="flex:none;margin-right:12px">' + hhmm(it.start) + '</span><span class="note">' + escapeHtml(it.note || '') + '</span>';
-        } else if (it.type === 'med') {
-          inner = '<span class="s note">' + TYPE_BADGE.med + '</span><span class="t">' + hhmm(it.start) + '</span><span class="note">' + escapeHtml(it.note || '') + '</span>';
+        } else if (it.type === 'med' || it.type === 'dose') {
+          inner = '<span class="s ' + (it.type === 'dose' ? 'dose' : 'note') + '">' + TYPE_BADGE[it.type] + '</span><span class="t"' + (it.type === 'dose' ? ' style="flex:none;margin-right:12px"' : '') + '>' + hhmm(it.start) + '</span><span class="note">' + escapeHtml(it.note || '') + '</span>';
         } else {   // weight, height, fever: value with delta to the previous measurement
           const prev = rows0.filter(r => r.type === it.type && r.start < it.start)[0];
           let delta = '';
@@ -674,12 +682,34 @@
   try { day24Open = localStorage.getItem('stillzeit.day24') === 'open'; } catch (e) {}
   // compact duration for the narrow tiles: 45 min, 1:05 h
   const durShort = ms => { const m = Math.round(ms / 60000); return m < 60 ? m + ' min' : Math.floor(m / 60) + ':' + pad(m % 60) + ' h'; };
+  // doses grouped by name (case and spaces ignored), most recently given first
+  function dosesBy(from) {
+    const m = new Map();
+    for (const e of alive()) {
+      if (e.type !== 'dose' || e.start < from || typeof e.note !== 'string') continue;
+      const k = e.note.trim().toLowerCase().replace(/\s+/g, ' ');
+      const x = m.get(k) || { name: e.note.trim(), n: 0, last: 0, days: new Map() };
+      x.n++; if (e.start > x.last) { x.last = e.start; x.name = DOSE_PRESETS.find(q => q.toLowerCase() === k) || e.note.trim(); }
+      const dk = dayKey(e.start); x.days.set(dk, (x.days.get(dk) || 0) + 1);
+      m.set(k, x);
+    }
+    return [...m.values()].sort((a, b) => b.last - a.last);
+  }
   function renderDay24(sc) {
     const box = $('day24');
-    if ((sc.key !== 'feed' && sc.key !== 'diaper') || !ofScreen(sc).length) { box.hidden = true; box.innerHTML = ''; return; }
+    if ((sc.key !== 'feed' && sc.key !== 'diaper' && sc.key !== 'dose') || !ofScreen(sc).length) { box.hidden = true; box.innerHTML = ''; return; }
     const tile = (cls, label, value, sub) => '<div class="tile ' + cls + '"><div class="l">' + label + '</div><div class="v">' + value + '</div><div class="s">' + sub + '</div></div>';
     const head = '<div class="top"><span class="h">Letzte 24 Stunden</span><span class="more">' + (day24Open ? 'weniger ▴' : 'Details ▾') + '</span></div>';
     box.classList.toggle('open', day24Open);
+    if (sc.key === 'dose') {
+      // per medicine in the rolling 24 h, most recent first; answers "hat sie heute schon Vitamin D bekommen?"
+      const g = dosesBy(Date.now() - 864e5).slice(0, 4), all = ofScreen(sc);
+      const tiles = g.length ? g.map(x => tile('dose', escapeHtml(x.name), x.n + ' mal', 'zuletzt ' + hhmm(x.last)))
+        : [tile('last', 'Zuletzt', 'vor ' + durShort(Date.now() - all[0].start), escapeHtml(all[0].note || '') + ' · ' + new Date(all[0].start).toLocaleDateString('de-DE', { day: 'numeric', month: 'short' }))];
+      box.innerHTML = head + '<div class="g" style="grid-template-columns:repeat(' + tiles.length + ',1fr)">' + tiles.join('') + '</div>';
+      box.hidden = false;
+      return;
+    }
     if (sc.key === 'diaper') {
       // counts in the rolling 24 h, same window as the Windel card on the Übersicht
       const from = Date.now() - 864e5, all = ofScreen(sc), w = all.filter(e => e.start >= from);
@@ -718,8 +748,8 @@
     if (sc.key === 'dash') { el.innerHTML = running + 'Antippen zeigt die Grafik.'; return; }
     const last = ofScreen(sc)[0];
     if (!last) { el.innerHTML = running; return; }
-    const what = sc.key === 'diaper' ? 'Letzte Windel' : sc.key === 'med' ? 'Letzter Eintrag' : sc.key === 'birth' ? 'Letztes Ereignis' : 'Zuletzt';
-    const detail = sc.key === 'birth' ? ' · ' + escapeHtml(last.note || '') : sc.key === 'diaper' || sc.key === 'med' ? (last.type === 'med' ? '' : ' · ' + TYPE_LABEL[last.type]) : ' · ' + valueLabel(last);
+    const what = sc.key === 'diaper' ? 'Letzte Windel' : sc.key === 'med' ? 'Letzter Eintrag' : sc.key === 'birth' ? 'Letztes Ereignis' : sc.key === 'dose' ? 'Zuletzt gegeben' : 'Zuletzt';
+    const detail = sc.key === 'birth' || sc.key === 'dose' ? ' · ' + escapeHtml(last.note || '') : sc.key === 'diaper' || sc.key === 'med' ? (last.type === 'med' ? '' : ' · ' + TYPE_LABEL[last.type]) : ' · ' + valueLabel(last);
     el.innerHTML = running + what + ' <b>' + ago(Date.now() - last.start) + '</b>' + detail;
   }
 
@@ -828,14 +858,14 @@
   const VALUE_UNIT = { feed: 'ml', bottle: 'ml', pump: 'ml', weight: 'kg', height: 'cm', fever: '°C' };
   function paintSide() { for (const b of editBox.querySelectorAll('.seg button')) b.classList.toggle('on', b.dataset.s === editSide); }
   for (const b of editBox.querySelectorAll('.seg button')) b.addEventListener('click', () => { editSide = b.dataset.s; paintSide(); });
-  const NOTE_IS_TEXT = { med: 1, birth: 1 };   // for these the note is the entry itself; elsewhere it is a comment
+  const NOTE_IS_TEXT = { med: 1, birth: 1, dose: 1 };   // for these the note is the entry itself; elsewhere it is a comment
   const CHIP_AMOUNTS = { pump: [10, 20, 40, 60, 80, 100, 120], bottle: [30, 60, 90, 120, 150] };
   let editIsNew = false;
   function openEdit(it, focus, isNew) {
     editIt = it; editIsNew = !!isNew;
     const feed = it.type === 'feed', running = feed && !it.end, pump = it.type === 'pump';
     const hasVal = (feed && !running) || it.type === 'bottle' || pump || it.type === 'weight' || it.type === 'height' || it.type === 'fever';
-    const hasText = it.type === 'med' || it.type === 'birth';
+    const hasText = !!NOTE_IS_TEXT[it.type];
     $('editTitle').textContent = running ? 'Laufendes Stillen' : isNew ? (TYPE_LABEL[it.type] || 'Eintrag') : (TYPE_LABEL[it.type] || 'Eintrag') + ' bearbeiten';
     $('eSideRow').hidden = !feed && !pump; editBox.querySelector('.seg button[data-s=B]').hidden = !pump;
     editSide = sideOf(it.side) || (pump ? 'B' : ''); paintSide();
@@ -911,7 +941,7 @@
 
   // ---------- dashboard: one card per area, tap opens its chart ----------
   let dashOpen = localStorage.getItem('stillzeit.dash') || '';
-  const C = { feed: '#c44a68', L: '#3f7fbf', R: '#e0863a', pee: '#c9922e', poo: '#8f5f34', measure: '#2a9d8f', fever: '#d9534f', cough: '#5c7f9e', grid: '#ece5e1', ink: '#6b6068' };
+  const C = { feed: '#c44a68', L: '#3f7fbf', R: '#e0863a', pee: '#c9922e', poo: '#8f5f34', measure: '#2a9d8f', fever: '#d9534f', cough: '#5c7f9e', dose: '#3b7ea1', grid: '#ece5e1', ink: '#6b6068' };
   const esc = escapeHtml;
   const dayList = n => { const out = []; const d0 = new Date(); d0.setHours(0, 0, 0, 0); for (let i = n - 1; i >= 0; i--) { const d = new Date(d0.getTime() - i * 864e5); out.push({ key: dayKey(d), t: d, label: d.getDate() + '.' }); } return out; };
   const byDay = (evs, n) => { const m = new Map(dayList(n).map(d => [d.key, []])); for (const e of evs) { const k = dayKey(e.start); if (m.has(k)) m.get(k).push(e); } return m; };
@@ -1031,7 +1061,29 @@
       let chart = '';
       if (fev.length) chart += svgLine(fev, { color: C.fever, fmt: v => fmtNum(v, 1), minSpan: 2, ref: 38, refLabel: '38 °C' }) + '<div class="cap">Fieber in °C, gestrichelt die 38-Grad-Linie.</div>';
       if (cough.length) chart += '<div style="height:10px"></div>' + svgBars(days, days.map(d => [{ v: m.get(d.key).length, color: C.cough }]), { labels: st => st[0].v }) + '<div class="cap">Husten pro Tag, letzte 14 Tage.</div>';
-      cards.push({ key: 'med', title: 'Medizin', sum, chart: chart || '<div class="cap">Noch keine Daten.</div>' });
+      cards.push({ key: 'med', title: 'Gesundheit', sum, chart: chart || '<div class="cap">Noch keine Daten.</div>' });
+    }
+    // Medikamente: one row per medicine, a dot on each of the last 14 days it was given
+    {
+      const g24 = dosesBy(Date.now() - 864e5), g = dosesBy(days[0].t.getTime()).slice(0, 6);
+      const sum = g24.length ? 'Letzte 24 h: ' + g24.map(x => escapeHtml(x.name) + (x.n > 1 ? ' ' + x.n + '×' : '')).join(' · ') : alive().some(e => e.type === 'dose') ? 'Letzte 24 h: nichts gegeben' : 'Noch nichts eingetragen.';
+      let chart = '<div class="cap">Noch keine Daten.</div>';
+      if (g.length) {
+        const W = 440, padL = 118, rowH = 26, top = 6, H = top + rowH * g.length + 22, step = (W - padL) / N;
+        let svg = '';
+        g.forEach((x, r) => {
+          const y = top + rowH * r + rowH / 2;
+          const nm = x.name.length > 16 ? x.name.slice(0, 15) + '…' : x.name;
+          svg += `<text x="0" y="${y + 4}" font-size="12" fill="${C.ink}">${escapeHtml(nm)}</text>`;
+          days.forEach((d, i) => {
+            const cx = padL + step * i + step / 2, n = x.days.get(d.key) || 0;
+            svg += n ? `<circle cx="${cx}" cy="${y}" r="8" fill="${C.dose}"/>` + (n > 1 ? `<text x="${cx}" y="${y + 4}" font-size="10" fill="#fff" text-anchor="middle">${n}</text>` : '') : `<circle cx="${cx}" cy="${y}" r="3" fill="${C.grid}"/>`;
+          });
+        });
+        days.forEach((d, i) => { if (i % 2 === 1 || i === N - 1) svg += `<text x="${padL + step * i + step / 2}" y="${H - 6}" font-size="11" fill="${C.ink}" text-anchor="middle">${d.label}</text>`; });
+        chart = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg">${svg}</svg><div class="cap">Gegeben an den letzten 14 Tagen, die Zahl im Punkt heißt mehrmals am Tag.</div>`;
+      }
+      cards.push({ key: 'dose', title: 'Medikamente', sum, chart });
     }
     // Geburt: a timeline, shown once something was logged
     {
@@ -1071,7 +1123,7 @@
   $('askCancel').addEventListener('click', () => history.back());
   askBox.addEventListener('click', e => { if (e.target === askBox) history.back(); });
   window.addEventListener('popstate', closeAsk);
-  const ASK_TYPE = { feed: 'Stillen', bottle: 'Flasche gegeben', pump: 'Abpumpen', pee: 'Windel Urin', poo: 'Windel Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', birth: 'Geburt' };
+  const ASK_TYPE = { feed: 'Stillen', bottle: 'Flasche gegeben', pump: 'Abpumpen', pee: 'Windel Urin', poo: 'Windel Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', dose: 'Medikament', birth: 'Geburt' };
   function askExport(days) {
     const since = days ? Date.now() - days * 864e5 : 0;
     const evs = db.events.filter(e => !e.deleted && e.child_id === db.active_child && e.start >= since && (e.type !== 'feed' || e.end)).sort((a, b) => a.start - b.start);
@@ -1118,7 +1170,7 @@
   function openEntry(b) {
     entryBtn = b;
     const inp = $('entryVal'), I = b.input;
-    $('entryTitle').textContent = I.chips ? 'Was ist passiert?' : b.label + (I.text || I.timeOnly ? '' : ' in ' + I.unit);
+    $('entryTitle').textContent = I.title ? I.title : b.label + (I.text || I.timeOnly ? '' : ' in ' + I.unit);
     $('entryValRow').hidden = !!I.timeOnly;
     inp.value = ''; inp.placeholder = I.placeholder || '';
     inp.type = 'text'; inp.inputMode = I.text ? 'text' : 'decimal';
@@ -1136,8 +1188,8 @@
       }
     }
     if (I.chips) {
-      const own = ownBirthLabels();
-      for (const label of own.concat(BIRTH_PRESETS)) {
+      const own = ownLabels(b.t);
+      for (const label of own.concat(PRESETS[b.t] || [])) {
         const c = document.createElement('button'); c.textContent = label; if (own.includes(label)) c.className = 'own';
         c.addEventListener('click', () => { inp.value = label; saveEntry(); });
         chips.appendChild(c);
