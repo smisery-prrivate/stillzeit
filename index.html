@@ -7,7 +7,7 @@
          node tools/csp-hash.js
      otherwise the browser refuses the script and the app stays blank (tools/hooks/pre-commit checks this).
      connect-src names the Supabase project from config.js; both change together. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-GC1HpnOW8SYYH9WqOz1yCCn3GUrvwVu4WJpG7gSwo1M='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-45PRhLSp/jJ+Edb0zoapp1OmyDO/Pm4EzU6S7cnuKww='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e0607e">
 <link rel="manifest" href="manifest.json">
@@ -212,6 +212,13 @@
   .tl .gap { color: var(--muted); font-size: 12px; }
   .tap.pee { background: #d9a441; } .tap.poo { background: #8a6a4a; }
   .tap.measure { background: #2a9d8f; }
+  .tap.sw_diaper { background: #4f8f6a; } .tap.sw_diaper.on { box-shadow: 0 0 0 5px var(--bg), 0 0 0 9px #4f8f6a; } .row .s.sw_diaper { background: #dcefe3; }
+  #day24 .tile.sw_diaper .l::before { background: #4f8f6a; }
+  #taps.n4 { display: grid; grid-template-columns: repeat(2, 104px); gap: 10px 28px; justify-content: center; }
+  #taps.n4 .tap { width: 104px; height: 104px; }
+  #taps.n4 .tap .big { font-size: 15px; text-align: center; line-height: 1.15; padding: 0 6px; }
+  #taps.n4 .tap.on .big { font-size: 21px; }
+  #taps.n4 .tap .lbl { font-size: 11px; text-align: center; padding: 0 6px; }
   .tap.sw_feed { background: #c44a68; } .tap.sw_cry { background: #d9822b; } .tap.sw_pump { background: #b0638a; }
   .tap.sw_feed.on { box-shadow: 0 0 0 5px var(--bg), 0 0 0 9px #c44a68; } .tap.sw_cry.on { box-shadow: 0 0 0 5px var(--bg), 0 0 0 9px #d9822b; } .tap.sw_pump.on { box-shadow: 0 0 0 5px var(--bg), 0 0 0 9px #b0638a; }
   .tap.on .big { font-variant-numeric: tabular-nums; }
@@ -293,7 +300,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v33</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v34</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -528,8 +535,8 @@
     { key: 'birth', title: 'Geburt', types: ['birth'], empty: 'Noch nichts festgehalten.<br>Unten antippen, wenn etwas passiert. Die Uhrzeit wird gespeichert und lässt sich später korrigieren.',
       buttons: [{ t: 'birth', label: 'Ereignis', sub: 'festhalten', cls: 'plug', input: { text: true, time: true, chips: true, title: 'Was ist passiert?', placeholder: 'Oder eigenes eintippen' } }] },
     { key: 'feed', title: 'Stillen', types: ['feed', 'bottle', 'pump'], empty: 'Noch kein Eintrag.<br>Unten tippen, wenn das Stillen beginnt.' },
-    { key: 'clock', title: 'Stoppuhren', types: ['sw_feed', 'sw_cry', 'sw_pump'], empty: 'Noch nichts gestoppt.<br>Unten antippen zum Starten, nochmal antippen zum Stoppen. Mehrere dürfen gleichzeitig laufen.',
-      buttons: [{ t: 'sw_feed', label: 'Stillen', cls: 'sw_feed', timer: true }, { t: 'sw_cry', label: 'Schreien', cls: 'sw_cry', timer: true }, { t: 'sw_pump', label: 'Abpumpen', cls: 'sw_pump', timer: true }] },
+    { key: 'clock', title: 'Stoppuhren', types: ['sw_feed', 'sw_cry', 'sw_pump', 'sw_diaper'], empty: 'Noch nichts gestoppt.<br>Unten antippen zum Starten, nochmal antippen zum Stoppen. Mehrere dürfen gleichzeitig laufen.',
+      buttons: [{ t: 'sw_feed', label: 'Stillen/<wbr>Füttern', cls: 'sw_feed', timer: true }, { t: 'sw_cry', label: 'Schreien', cls: 'sw_cry', timer: true }, { t: 'sw_pump', label: 'Abpumpen', cls: 'sw_pump', timer: true }, { t: 'sw_diaper', label: 'Wickeln', cls: 'sw_diaper', timer: true }] },
     { key: 'diaper', title: 'Windel', types: ['pee', 'poo'], empty: 'Noch keine Windel.<br>Unten tippen: Urin oder Stuhl.',
       buttons: [{ t: 'pee', label: 'Urin', cls: 'pee' }, { t: 'poo', label: 'Stuhl', cls: 'poo' }] },
     { key: 'weight', title: 'Gewicht', types: ['weight'], empty: 'Noch kein Gewicht.<br>Unten tippen und eintragen.',
@@ -542,10 +549,10 @@
       buttons: [{ t: 'dose', label: 'Gegeben', sub: 'eintragen', cls: 'dose', input: { text: true, time: true, chips: true, title: 'Was wurde gegeben?', placeholder: 'Oder eintippen, z.B. Paracetamol 125 mg' } }] },
     { key: 'dash', title: 'Übersicht', types: [], empty: '', buttons: [{ label: 'Claude', sub: 'fragen', cls: 'ask', action: 'ask' }] }
   ];
-  const TYPE_LABEL = { birth: 'Geburt', pee: 'Urin', poo: 'Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', dose: 'Medikament', feed: 'Stillen', bottle: 'Flasche gegeben', pump: 'Abpumpen', sw_feed: 'Stoppuhr Stillen', sw_cry: 'Schreien', sw_pump: 'Stoppuhr Abpumpen' };
+  const TYPE_LABEL = { birth: 'Geburt', pee: 'Urin', poo: 'Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', dose: 'Medikament', feed: 'Stillen', bottle: 'Flasche gegeben', pump: 'Abpumpen', sw_feed: 'Stoppuhr Stillen/Füttern', sw_cry: 'Schreien', sw_pump: 'Stoppuhr Abpumpen', sw_diaper: 'Wickeln' };
   // stopwatches: their own entries (start, end), separate from the feed and pump entries; several may run at once.
   // warn = minutes after which stopping asks "vergessen zu stoppen?" and opens the end time for correction
-  const SW = { sw_feed: { l: 'Stillen', c: '#c44a68', icon: '🤱', warn: 60 }, sw_cry: { l: 'Schreien', c: '#d9822b', icon: '😭', warn: 30 }, sw_pump: { l: 'Abpumpen', c: '#b0638a', icon: '💧', warn: 60 } };
+  const SW = { sw_feed: { l: 'Stillen/Füttern', c: '#c44a68', icon: '🤱', warn: 60 }, sw_cry: { l: 'Schreien', c: '#d9822b', icon: '😭', warn: 30 }, sw_pump: { l: 'Abpumpen', c: '#b0638a', icon: '💧', warn: 60 }, sw_diaper: { l: 'Wickeln', c: '#4f8f6a', icon: '🧷', warn: 20 } };
   const runningSw = t => alive().filter(e => e.type === t && !e.end).sort((a, b) => a.start - b.start)[0] || null;
   const durTiny = ms => ms < 60000 ? Math.round(ms / 1000) + ' s' : durShort(ms);
   const TYPE_BADGE = { pee: 'U', poo: 'S', weight: 'kg', height: 'cm', fever: '°', cough: 'H', med: '✎', dose: '💊' };
@@ -721,7 +728,7 @@
     if (sc.key === 'clock') {
       // per stopwatch: average duration of the finished ones in the rolling 24 h
       const from = Date.now() - 864e5;
-      box.innerHTML = head + '<div class="g" style="grid-template-columns:repeat(3,1fr)">' + sc.types.map(t => {
+      box.innerHTML = head + '<div class="g" style="grid-template-columns:repeat(' + sc.types.length + ',1fr)">' + sc.types.map(t => {
         const a = alive().filter(e => e.type === t && e.end && e.start >= from), tot = a.reduce((x, e) => x + (e.end - e.start), 0);
         return tile(t, SW[t].l, a.length ? 'Ø ' + durTiny(tot / a.length) : '–', a.length ? a.length + ' mal · zusammen ' + durTiny(tot) : 'nichts gestoppt');
       }).join('') + '</div>';
@@ -1090,7 +1097,7 @@
         chart: pv.length ? legend([{ c: C.L, l: 'links' }, { c: C.R, l: 'rechts' }, { c: '#b0638a', l: 'beide' }]) + svgBars(days, stacks, { fmt: v => v + ' ml', labels: (st, i) => m.get(days[i].key).length + '×' }) + '<div class="cap">Abgepumpte ml pro Tag, letzte 14 Tage.</div>' : '<div class="cap">Noch keine Daten.</div>' });
     }
     // Stoppuhren: one card each, own scale (Schreien in minutes, Abpumpen up to an hour), 24 h, 7 days, trend
-    for (const t of ['sw_feed', 'sw_cry', 'sw_pump']) {
+    for (const t of Object.keys(SW)) {
       const all = alive().filter(e => e.type === t && e.end); if (!all.length) continue;
       const t0 = Date.now(), win = (a, b) => all.filter(e => e.start >= t0 - a && e.start < t0 - b);
       const stat = a => { const tot = a.reduce((x, e) => x + (e.end - e.start), 0); return { n: a.length, tot, avg: a.length ? tot / a.length : 0 }; };
@@ -1194,7 +1201,7 @@
   $('askCancel').addEventListener('click', () => history.back());
   askBox.addEventListener('click', e => { if (e.target === askBox) history.back(); });
   window.addEventListener('popstate', closeAsk);
-  const ASK_TYPE = { feed: 'Stillen', bottle: 'Flasche gegeben', pump: 'Abpumpen', pee: 'Windel Urin', poo: 'Windel Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', dose: 'Medikament', birth: 'Geburt', sw_feed: 'Stoppuhr Stillen', sw_cry: 'Stoppuhr Schreien', sw_pump: 'Stoppuhr Abpumpen' };
+  const ASK_TYPE = { feed: 'Stillen', bottle: 'Flasche gegeben', pump: 'Abpumpen', pee: 'Windel Urin', poo: 'Windel Stuhl', weight: 'Gewicht', height: 'Größe', fever: 'Fieber', cough: 'Husten', med: 'Notiz', dose: 'Medikament', birth: 'Geburt', sw_feed: 'Stoppuhr Stillen/Füttern', sw_cry: 'Stoppuhr Schreien', sw_pump: 'Stoppuhr Abpumpen', sw_diaper: 'Stoppuhr Wickeln' };
   function askExport(days) {
     const since = days ? Date.now() - days * 864e5 : 0;
     const evs = db.events.filter(e => !e.deleted && e.child_id === db.active_child && e.start >= since && ((e.type !== 'feed' && !SW[e.type]) || e.end)).sort((a, b) => a.start - b.start);
