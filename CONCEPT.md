@@ -285,6 +285,8 @@ db = {
   die 7 Tage davor und Balken Ø-Dauer pro Tag. Geplant: Uhr-App (Galaxy Watch 6, Wear OS) mit Kachel.
 - v34 (2026-11-08): Stoppuhr „Stillen“ heißt „Stillen/Füttern“; vierte Stoppuhr „Wickeln“ (`sw_diaper`);
   vier Knöpfe als 2×2. Uhr-App (Stillzeit_Watch) ebenso.
+- v35 (2026-11-08): Bildschirm „Stoppuhren“ steht jetzt über Stillen (Pfeil hoch von Stillen); unter Stillen
+  weiter Windel.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.
