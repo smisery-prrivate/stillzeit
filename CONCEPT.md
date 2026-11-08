@@ -276,6 +276,13 @@ db = {
   Vitamin D + Fluorid, Jodid, Vitamin K, Paracetamol, Ibuprofen, Simeticon, Probiotika, Nasentropfen, Eisen,
   dazu alles schon einmal Eingetippte; Antippen speichert sofort, Zeitpunkt korrigierbar. Leiste „Letzte 24
   Stunden“ je Medikament; Übersicht-Karte mit 14-Tage-Raster je Medikament.
+- v33 (2026-11-08): Bildschirm „Stoppuhren“ direkt nach Stillen: drei große Knöpfe Stillen, Schreien, Abpumpen
+  (Typen `sw_feed`, `sw_cry`, `sw_pump`, eigene Einträge mit Beginn/Ende, getrennt von den Still- und
+  Pump-Einträgen). Antippen startet, nochmal antippen stoppt; mehrere laufen parallel, der Knopf zeigt die Zeit.
+  Vergessen zu stoppen: lief eine Stoppuhr länger als 60 min (Schreien 30 min), öffnet sich beim Stoppen das
+  Bearbeiten mit dem Ende zum Korrigieren; Beginn und Ende sind immer editierbar. Leiste „Letzte 24 Stunden“ mit
+  Ø-Dauer je Stoppuhr; Übersicht: je Stoppuhr eine eigene Karte (eigene Skala) mit 24 h, 7 Tagen, Trend gegen
+  die 7 Tage davor und Balken Ø-Dauer pro Tag. Geplant: Uhr-App (Galaxy Watch 6, Wear OS) mit Kachel.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.
