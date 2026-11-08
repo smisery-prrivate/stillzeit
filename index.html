@@ -7,7 +7,7 @@
          node tools/csp-hash.js
      otherwise the browser refuses the script and the app stays blank (tools/hooks/pre-commit checks this).
      connect-src names the Supabase project from config.js; both change together. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-BEge//zxzwcjIZA5JXJCguDxfMrszcnTyGHZz+TvZUM='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-k8EBrfHU2vYyIWwYUn9RmdFDWdbZztye0mnKiNYfo94='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e0607e">
 <link rel="manifest" href="manifest.json">
@@ -214,6 +214,7 @@
   .tap.measure { background: #2a9d8f; }
   .tap.sw_diaper { background: #4f8f6a; } .tap.sw_diaper.on { box-shadow: 0 0 0 5px var(--bg), 0 0 0 9px #4f8f6a; } .row .s.sw_diaper { background: #dcefe3; }
   #day24 .tile.sw_diaper .l::before { background: #4f8f6a; }
+  #taps[hidden] { display: none !important; }
   #taps.n4 { display: grid; grid-template-columns: repeat(2, 104px); gap: 10px 28px; justify-content: center; }
   #taps.n4 .tap { width: 104px; height: 104px; }
   #taps.n4 .tap .big { font-size: 15px; text-align: center; line-height: 1.15; padding: 0 6px; }
@@ -300,7 +301,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v35</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v36</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -801,7 +802,7 @@
     if (tick) { clearInterval(tick); tick = null; }
     if (sc.key !== 'feed') {
       big.hidden = true; starts.hidden = true; cancel.classList.remove('show'); cancel.classList.add('gone'); fixStart.classList.remove('show'); fixStart.classList.add('gone');
-      if (!sc.buttons.length) { taps.hidden = true; renderSince(); return; }
+      if (!sc.buttons.length) { taps.hidden = true; taps.className = ''; renderSince(); return; }
       taps.hidden = false; taps.className = 'n' + sc.buttons.length; taps.innerHTML = '';
       const paintSw = (el, b) => {
         const run = runningSw(b.t); el.classList.toggle('on', !!run);
@@ -823,7 +824,7 @@
       renderSince();
       return;
     }
-    taps.hidden = true; cancel.classList.remove('gone'); fixStart.classList.remove('gone');
+    taps.hidden = true; taps.className = ''; cancel.classList.remove('gone'); fixStart.classList.remove('gone');
     big.hidden = !run; starts.hidden = !!run;
     big.classList.remove('L', 'R'); if (run && sideOf(run.side)) big.classList.add(run.side);
     cancel.classList.toggle('show', !!run); fixStart.classList.toggle('show', !!run);

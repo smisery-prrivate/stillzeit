@@ -287,6 +287,8 @@ db = {
   vier Knöpfe als 2×2. Uhr-App (Stillzeit_Watch) ebenso.
 - v35 (2026-11-08): Bildschirm „Stoppuhren“ steht jetzt über Stillen (Pfeil hoch von Stillen); unter Stillen
   weiter Windel.
+- v36 (2026-11-08): Fehler behoben: die vier Stoppuhr-Knöpfe blieben nach dem Besuch der Stoppuhren auf Stillen
+  sichtbar (die 2×2-Anordnung überstimmte das Verstecken). Sie erscheinen nur noch auf dem Stoppuhren-Bildschirm.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.
