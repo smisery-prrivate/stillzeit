@@ -291,6 +291,8 @@ db = {
   sichtbar (die 2×2-Anordnung überstimmte das Verstecken). Sie erscheinen nur noch auf dem Stoppuhren-Bildschirm.
 - v37 (2026-11-10): Leiste „Letzte 24 Stunden“ der Stoppuhren: Schreien zeigt groß die Gesamtzeit (darunter Anzahl und Ø),
   die anderen Stoppuhren weiter den Durchschnitt.
+- v38 (2026-11-10): Stoppuhr-Knöpfe reagierten manchmal nicht: der Knopfinhalt wurde jede Sekunde ersetzt und
+  verschluckte Tipps über den Sekundenwechsel. Texte werden jetzt an Ort und Stelle geändert, Knöpfe bleiben bei Sync stehen.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.

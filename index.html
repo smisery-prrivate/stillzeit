@@ -7,7 +7,7 @@
          node tools/csp-hash.js
      otherwise the browser refuses the script and the app stays blank (tools/hooks/pre-commit checks this).
      connect-src names the Supabase project from config.js; both change together. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Aptci51aPf0Is5GKv2ZxdvE9QSOHk//nwMLcuNLUnmk='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-jP5t+1/pIUhRqca3w0I/XQrBmHWbuzpPADDz/W1mLQk='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e0607e">
 <link rel="manifest" href="manifest.json">
@@ -172,6 +172,7 @@
   #taps[hidden] { display: none; }
   .tap { width: 140px; height: 140px; border-radius: 50%; border: none; color: #fff; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; box-shadow: 0 10px 28px rgba(43,37,48,.22); }
   .tap:active { transform: scale(.97); }
+  .tap > * { pointer-events: none; }   /* a tap always lands on the button itself */
   .tap .big { font-size: 26px; font-weight: 800; line-height: 1.1; }
   .tap .lbl { font-size: 13px; font-weight: 600; opacity: .9; }
   #taps.n3 .tap { width: 106px; height: 106px; }
@@ -301,7 +302,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v37</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v38</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -804,11 +805,23 @@
     if (tick) { clearInterval(tick); tick = null; }
     if (sc.key !== 'feed') {
       big.hidden = true; starts.hidden = true; cancel.classList.remove('show'); cancel.classList.add('gone'); fixStart.classList.remove('show'); fixStart.classList.add('gone');
-      if (!sc.buttons.length) { taps.hidden = true; taps.className = ''; renderSince(); return; }
-      taps.hidden = false; taps.className = 'n' + sc.buttons.length; taps.innerHTML = '';
+      if (!sc.buttons.length) { taps.hidden = true; taps.className = ''; taps._key = null; renderSince(); return; }
+      // same stopwatch screen as before: keep the buttons (a sync in the middle of a tap must not remove them)
+      if (taps._key === sc.key && taps._sw) {
+        taps.hidden = false; const els = taps._sw;
+        for (const [el, b] of els) taps._paint(el, b);
+        tick = setInterval(() => { for (const [el, b] of els) taps._paint(el, b); renderSince(); }, 1000);
+        renderSince(); return;
+      }
+      taps.hidden = false; taps.className = 'n' + sc.buttons.length; taps.innerHTML = ''; taps._key = sc.key; taps._sw = null;
       const paintSw = (el, b) => {
+        // change the two texts in place: replacing the button's content every second swallowed
+        // taps that began just before the tick
         const run = runningSw(b.t); el.classList.toggle('on', !!run);
-        el.innerHTML = run ? '<span class="big">' + clock(Date.now() - run.start) + '</span><span class="lbl">Stopp · ' + b.label + '</span>' : '<span class="big">' + b.label + '</span><span class="lbl">Start</span>';
+        if (!el.firstChild) el.innerHTML = '<span class="big"></span><span class="lbl"></span>';
+        const set = (node, html) => { if (node._h !== html) { node._h = html; node.innerHTML = html; } };
+        set(el.children[0], run ? clock(Date.now() - run.start) : b.label);
+        set(el.children[1], run ? 'Stopp · ' + b.label : 'Start');
       };
       const swEls = [];
       for (const b of sc.buttons) {
@@ -822,11 +835,12 @@
         el.addEventListener('click', () => b.action === 'ask' ? openAsk() : b.input ? openEntry(b) : (addEvent(Object.assign({ type: b.t, start: Date.now() }, b.note ? { note: b.note } : {})), render()));
         taps.appendChild(el);
       }
+      if (swEls.length && swEls.length === sc.buttons.length) { taps._sw = swEls; taps._paint = paintSw; }
       if (swEls.length) tick = setInterval(() => { for (const [el, b] of swEls) paintSw(el, b); renderSince(); }, 1000);
       renderSince();
       return;
     }
-    taps.hidden = true; taps.className = ''; cancel.classList.remove('gone'); fixStart.classList.remove('gone');
+    taps.hidden = true; taps.className = ''; taps._key = null; cancel.classList.remove('gone'); fixStart.classList.remove('gone');
     big.hidden = !run; starts.hidden = !!run;
     big.classList.remove('L', 'R'); if (run && sideOf(run.side)) big.classList.add(run.side);
     cancel.classList.toggle('show', !!run); fixStart.classList.toggle('show', !!run);
