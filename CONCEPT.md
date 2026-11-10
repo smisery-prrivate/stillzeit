@@ -289,6 +289,8 @@ db = {
   weiter Windel.
 - v36 (2026-11-08): Fehler behoben: die vier Stoppuhr-Knöpfe blieben nach dem Besuch der Stoppuhren auf Stillen
   sichtbar (die 2×2-Anordnung überstimmte das Verstecken). Sie erscheinen nur noch auf dem Stoppuhren-Bildschirm.
+- v37 (2026-11-10): Leiste „Letzte 24 Stunden“ der Stoppuhren: Schreien zeigt groß die Gesamtzeit (darunter Anzahl und Ø),
+  die anderen Stoppuhren weiter den Durchschnitt.
 
 ## Ideen (gewünscht, noch offen)
 - Sprachbedienung: "Stillen links", "Stopp" per Web Speech API (Android Chrome), wie in Braindump.

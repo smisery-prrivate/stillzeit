@@ -7,7 +7,7 @@
          node tools/csp-hash.js
      otherwise the browser refuses the script and the app stays blank (tools/hooks/pre-commit checks this).
      connect-src names the Supabase project from config.js; both change together. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-k8EBrfHU2vYyIWwYUn9RmdFDWdbZztye0mnKiNYfo94='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-Aptci51aPf0Is5GKv2ZxdvE9QSOHk//nwMLcuNLUnmk='; style-src 'self' 'unsafe-inline'; img-src 'self'; connect-src 'self' https://nqhzfommnfpxayjafits.supabase.co; worker-src 'self'; manifest-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#e0607e">
 <link rel="manifest" href="manifest.json">
@@ -301,7 +301,7 @@
 <div id="app">
   <div id="navTop" class="nav" hidden><span class="tri">▲</span><span class="name"></span></div>
   <header>
-    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v36</div></div>
+    <div><h1 id="title">Stillen</h1><div class="version">Stillzeit · v37</div></div>
     <button id="menu" class="pill">⋯</button>
   </header>
   <div id="since"></div>
@@ -731,6 +731,8 @@
       const from = Date.now() - 864e5;
       box.innerHTML = head + '<div class="g" style="grid-template-columns:repeat(' + sc.types.length + ',1fr)">' + sc.types.map(t => {
         const a = alive().filter(e => e.type === t && e.end && e.start >= from), tot = a.reduce((x, e) => x + (e.end - e.start), 0);
+        // Schreien: what counts is how long in total, the others by average
+        if (t === 'sw_cry') return tile(t, SW[t].l, a.length ? durTiny(tot) : '–', a.length ? 'gesamt · ' + a.length + ' mal · Ø ' + durTiny(tot / a.length) : 'nichts gestoppt');
         return tile(t, SW[t].l, a.length ? 'Ø ' + durTiny(tot / a.length) : '–', a.length ? a.length + ' mal · zusammen ' + durTiny(tot) : 'nichts gestoppt');
       }).join('') + '</div>';
       box.hidden = false;
